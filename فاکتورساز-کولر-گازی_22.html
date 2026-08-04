@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فاکتورساز خدمات کولر گازی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#111111;
+    --muted:#5b6b6e;
+    --line:#dcdcdc;
+    --line-soft:#eeeeee;
+    --bg:#f5f5f4;
+    --panel:#ffffff;
+    --warn:#b3261e;
+    --ok:#2f8a4e;
+    --radius:10px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:'Vazirmatn', Tahoma, sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    direction:rtl;
+    min-height:100vh;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns: 420px 1fr;
+    gap:20px;
+    padding:20px;
+    max-width:1400px;
+    margin:0 auto;
+    align-items:start;
+  }
+  @media (max-width: 980px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+  .form-col, .preview-col{ min-width:0; }
+  @media (max-width: 480px){
+    .layout{ padding:12px; gap:14px; }
+    .panel{ padding:14px; }
+  }
+
+  /* ---------- Form column ---------- */
+  .form-col{ display:flex; flex-direction:column; gap:16px; }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+  }
+  .panel h2{
+    font-size:14px;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;
+    user-select:none;
+  }
+  .panel h2 .arrow{ transition:transform .15s ease; font-size:12px; color:var(--muted); }
+  .panel.collapsed .arrow{ transform:rotate(-90deg); }
+  .panel .panel-body{ display:flex; flex-direction:column; gap:12px; }
+  .panel.collapsed .panel-body{ display:none; }
+
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size:12.5px; color:var(--muted); }
+  .field input[type=text], .field input[type=number], .field input[type=tel], .field textarea{
+    font-family:inherit;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:13.5px;
+    background:#fff;
+    color:var(--ink);
+    width:100%;
+  }
+  .field input:focus, .field textarea:focus{ outline:2px solid var(--ink); outline-offset:1px; }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .date-field-wrap{ display:flex; gap:6px; align-items:stretch; }
+  .date-field-wrap input{ flex:1; min-width:0; }
+  .date-step-btns{ display:flex; flex-direction:column; gap:2px; }
+  .date-step-btn{
+    width:28px; flex:1; border:1px solid var(--line); background:#fff; cursor:pointer;
+    font-size:9px; line-height:1; border-radius:5px; padding:0; color:var(--muted);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .date-step-btn:hover{ background:#f2f2f2; color:var(--ink); }
+  .date-step-btn:active{ background:#e8e8e8; }
+
+  .logo-row{ display:flex; align-items:center; gap:12px; }
+  .logo-row input[type=file]{ min-width:0; max-width:100%; font-size:12px; }
+  .logo-preview{
+    width:100px; height:100px; border:1px dashed var(--line); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:#fafafa;
+  }
+  .logo-preview img{ width:100%; height:100%; object-fit:contain; }
+  .logo-preview span{ font-size:10.5px; color:var(--muted); text-align:center; padding:2px; }
+
+  .btn{
+    font-family:inherit;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:#fff;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:13.5px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  .btn:hover{ opacity:.88; }
+  .btn.outline{ background:#fff; color:var(--ink); }
+  .btn.ghost{ background:transparent; color:var(--muted); border-color:var(--line); font-weight:400; }
+  .btn.sm{ padding:6px 10px; font-size:12.5px; }
+  .btn.danger{ color:var(--warn); border-color:var(--warn); background:#fff; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .items-wrap{ display:flex; flex-direction:column; gap:14px; }
+  .item-row{ display:flex; flex-direction:column; gap:6px; padding-bottom:10px; border-bottom:1px dashed var(--line); }
+  .item-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .item-row-main{
+    display:grid;
+    grid-template-columns: 1fr 55px 70px 110px auto;
+    gap:8px;
+    align-items:center;
+  }
+  .item-row input{
+    font-family:inherit; border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:13px; width:100%;
+  }
+  .item-row .it-detail{ font-size:12.5px; color:var(--muted); }
+  .item-row .remove-btn{
+    background:none; border:none; color:var(--warn); cursor:pointer; font-size:16px; padding:2px 6px;
+  }
+  .item-row .line-total{ font-size:11px; color:var(--muted); grid-column:1/4; text-align:left; margin-top:-4px; }
+  .item-tax-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .item-tax-toggle{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); cursor:pointer; white-space:nowrap; }
+  .item-tax-toggle input{ width:14px; height:14px; margin:0; }
+  .item-row .it-tax-percent{ max-width:170px; font-size:12.5px; }
+
+  .sticky-actions{
+    position:sticky; bottom:0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .totals-mini{ font-size:13px; color:var(--muted); display:flex; flex-direction:column; gap:3px; }
+  .totals-mini .grand{ font-weight:700; color:var(--ink); font-size:13px; border-top:1px solid var(--line); padding-top:6px; margin-top:2px; }
+  .totals-mini div{ display:flex; justify-content:space-between; }
+  .action-btns{ display:flex; gap:10px; flex-wrap:wrap; }
+  .action-btns .btn{ flex:1; }
+
+  .hint{ font-size:11.5px; color:var(--muted); line-height:1.7; }
+
+  /* ---------- Preview column ---------- */
+  .preview-col{ display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; }
+  .sheet-shadow{
+    background:#fff;
+    width:100%;
+    max-width:794px;
+    box-shadow:0 2px 18px rgba(0,0,0,.12);
+    border-radius:4px;
+    overflow-x:auto;
+  }
+
+  #invoiceSheet{
+    padding:34px 38px;
+    font-size:13px;
+    color:var(--ink);
+    border:1.5px solid var(--ink);
+  }
+  @media screen{
+    #invoiceSheet{ min-height:1000px; }
+  }
+  @media (max-width: 480px){
+    #invoiceSheet{ padding:16px; font-size:12px; }
+    table.inv-table{ font-size:11.5px; }
+  }
+  .inv-header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom:1.5px solid var(--ink);
+    padding-bottom:14px; margin-bottom:16px; gap:14px;
+  }
+  .inv-brand{ display:flex; align-items:center; gap:12px; }
+  .inv-brand img{ width:96px; height:96px; object-fit:contain; border-radius:6px; }
+  .inv-brand-name{ font-size:19px; font-weight:800; }
+  .inv-brand-sub{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+  .inv-brand-ids{ font-size:10.5px; color:var(--muted); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; }
+  .inv-meta{ text-align:left; white-space:nowrap; font-size:12.5px; }
+  .inv-meta .num{ font-size:16px; font-weight:800; }
+  .inv-meta div{ margin-bottom:3px; }
+  .inv-badge{ display:inline-block; padding:3px 12px; border-radius:100px; font-size:11px; font-weight:700; background:#f0f0f0; margin-top:4px; }
+  .inv-badge.paid{ background:#eaf5ee; color:var(--ok); }
+  .inv-badge.unpaid{ background:#f6f0e6; color:#8a5a10; }
+
+  .cust-box{
+    background:#fff; border:1.5px solid var(--ink); border-radius:0;
+    padding:12px 16px; margin-bottom:18px;
+    display:grid; grid-template-columns:1fr 1fr; gap:10px 20px;
+  }
+  .cust-box .lbl{ font-size:11px; color:var(--muted); }
+  .cust-box .val{ font-weight:700; font-size:13px; }
+
+  table.inv-table{ width:100%; border-collapse:collapse; margin-bottom:18px; border:1.5px solid var(--ink); }
+  table.inv-table thead th{ background:var(--ink); color:#fff; font-size:11.5px; padding:8px 7px; font-weight:700; border:1px solid var(--ink); }
+  table.inv-table tbody td{ padding:8px 7px; border:1px solid var(--line); font-size:13px; }
+  table.inv-table tbody tr:nth-child(even){ background:#fafafa; }
+  .c-center{ text-align:center; }
+  .c-left{ text-align:left; direction:ltr; }
+  .item-detail-line{ font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .inv-totals{ width:100%; font-size:13px; border:1.5px solid var(--ink); padding:10px 16px; margin-bottom:18px; }
+  .inv-totals div{ display:flex; justify-content:space-between; padding:4px 3px; }
+  .inv-totals .subtle{ color:var(--muted); }
+  .inv-totals .divider{ border-top:1px solid var(--line); margin:2px 0; padding:0; }
+  .inv-totals .grand{ border-top:1.5px solid var(--ink); margin-top:4px; padding-top:8px; font-weight:800; font-size:13px; }
+
+  .inv-note{ margin-bottom:18px; font-size:11.5px; color:var(--muted); background:#fff; border:1.5px solid var(--ink); border-radius:0; padding:10px 14px; }
+  .inv-footer{ margin-top:20px; padding-top:16px; border-top:1.5px solid var(--ink); display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); }
+  .inv-footer .sig-line{ margin-top:34px; border-top:1px solid #999; width:130px; }
+  .inv-footer .sig{ text-align:center; }
+  .empty-row td{ text-align:center; color:#aaa; padding:20px; }
+
+  /* ---------- Records (saved invoices) ---------- */
+  .records-wrap{ max-width:1400px; margin:0 auto; padding:0 20px 20px; }
+  .records-list{ display:flex; flex-direction:column; gap:8px; }
+  .record-card{
+    border:1px solid var(--line); border-radius:8px; padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+    cursor:pointer; flex-wrap:wrap;
+  }
+  .record-card:hover{ border-color:var(--ink); background:#fafafa; }
+  .record-main{ display:flex; flex-direction:column; gap:3px; min-width:200px; }
+  .record-title{ font-weight:700; font-size:13.5px; }
+  .record-sub{ font-size:11.5px; color:var(--muted); }
+  .record-right{ display:flex; align-items:center; gap:10px; }
+  .record-amount{ font-weight:700; font-size:13px; white-space:nowrap; }
+  .record-status{ font-size:10.5px; padding:3px 10px; border-radius:100px; font-weight:700; white-space:nowrap; }
+  .record-status.paid{ background:#eaf5ee; color:var(--ok); }
+  .record-status.unpaid{ background:#f6f0e6; color:#8a5a10; }
+  .record-status.pending{ background:#eef2f6; color:#3a5a78; }
+  .record-card.overdue{ border-color:#e0a0a0; background:#fff8f7; }
+  .record-card.overdue:hover{ background:#fdeeed; }
+  .overdue-badge{ font-size:10px; font-weight:700; color:var(--warn); background:#fdecea; padding:3px 9px; border-radius:100px; white-space:nowrap; }
+
+  /* ---------- Customer profile ---------- */
+  .cust-profile-card{ border:1px solid var(--line); border-radius:8px; padding:16px; }
+  .cust-profile-header{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .cust-profile-name{ font-size:16px; font-weight:800; }
+  .cust-profile-sub{ font-size:12.5px; color:var(--muted); margin-top:3px; }
+  .cust-profile-dates{ display:flex; gap:18px; font-size:11.5px; color:var(--muted); margin-top:12px; flex-wrap:wrap; }
+  .record-delete{ background:none; border:none; color:var(--warn); cursor:pointer; font-size:15px; padding:4px 6px; }
+  .quick-status-select{
+    font-family:inherit; font-size:10.5px; font-weight:700; border:none; border-radius:100px;
+    padding:4px 22px 4px 8px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    background-repeat:no-repeat; background-position:left 6px center; background-size:9px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+  .quick-status-select.paid{ background-color:#eaf5ee; color:var(--ok); }
+  .quick-status-select.unpaid{ background-color:#f6f0e6; color:#8a5a10; }
+  .quick-status-select.pending{ background-color:#eef2f6; color:#3a5a78; }
+
+  /* ---------- Preset manager ---------- */
+  .preset-manager-list{ display:flex; flex-wrap:wrap; gap:8px; }
+  .preset-chip{
+    display:flex; align-items:center; gap:4px;
+    border:1px solid var(--line); border-radius:100px;
+    padding:5px 6px 5px 12px; font-size:12px; background:#fafafa;
+  }
+  .preset-chip button{
+    background:none; border:none; color:var(--warn); cursor:pointer; font-size:13px;
+    width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  }
+  .preset-chip button:hover{ background:#fdecea; }
+  .preset-chip button.perm-del{ font-size:11px; color:#8a5a10; }
+  .preset-chip button.perm-del:hover{ background:#fdf1e0; }
+  .suggest-list{ display:flex; flex-direction:column; gap:6px; }
+  .suggest-check{ display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer; }
+  .suggest-check input{ width:15px; height:15px; margin:0; }
+
+  /* ---------- Income report ---------- */
+  .report-filter-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .report-filter-row .btn.active{ background:var(--ink); color:#fff; }
+  .report-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; }
+  .report-card{ border:1px solid var(--line); border-radius:8px; padding:14px; text-align:center; }
+  .report-card .num{ font-size:18px; font-weight:800; }
+  .report-card .lbl{ font-size:11.5px; color:var(--muted); margin-top:4px; }
+  .report-card .count{ font-size:11px; color:var(--muted); margin-top:6px; padding-top:6px; border-top:1px dashed var(--line); }
+  .report-card.paid .num{ color:var(--ok); }
+  .report-card.unpaid .num{ color:#8a5a10; }
+  .report-card.pending .num{ color:#3a5a78; }
+
+  @media print{
+    .form-col{ display:none !important; }
+    .records-wrap{ display:none !important; }
+    .layout{ display:block; padding:0; max-width:none; }
+    .preview-col{ display:block; }
+    .sheet-shadow{ box-shadow:none; max-width:none; width:100%; border-radius:0; overflow:visible; }
+    #invoiceSheet{ padding:6mm; }
+    @page{ size:A4; margin:10mm; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="layout">
+    <!-- ============ FORM COLUMN ============ -->
+    <div class="form-col">
+
+      <div id="editingBanner" style="display:none; background:#fff8e6; border:1px solid #e8d9a0; border-radius:8px; padding:10px 14px; font-size:12.5px; color:#7a5c00; align-items:center; justify-content:space-between; gap:10px;">
+        <span>در حال ویرایش یک فاکتور ثبت‌شده هستید؛ با گرفتن PDF، همین رکورد به‌روزرسانی می‌شود.</span>
+        <button type="button" class="btn ghost sm" id="cancelEditBtn" style="padding:4px 10px; white-space:nowrap;">لغو ویرایش</button>
+      </div>
+
+      <div class="panel collapsed" id="panelBackup">
+        <h2 onclick="togglePanel('panelBackup')">💾 پشتیبان‌گیری و بازیابی <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="hint">همه‌ی اطلاعات این ابزار (فاکتورهای ثبت‌شده، تنظیمات شرکت، لوگو، لیست پیشنهادی اقلام) فقط روی همین مرورگر ذخیره می‌شود. اگر کش مرورگر پاک شود، دستگاه یا مرورگر عوض شود، همه چیز از دست می‌رود. برای جلوگیری از این اتفاق، هر چند وقت یک‌بار یک فایل پشتیبان دانلود کنید.</div>
+          <div class="action-btns">
+            <button type="button" class="btn outline" id="downloadBackupBtn">📥 دانلود پشتیبان</button>
+            <button type="button" class="btn outline" id="restoreBackupBtn">📤 بازیابی از فایل</button>
+          </div>
+          <input type="file" id="restoreFileInput" accept="application/json,.json" style="display:none;">
+          <div class="hint">بازیابی، فایل پشتیبانی که قبلاً دانلود کرده‌اید را دوباره روی همین یا هر مرورگر/دستگاه دیگری برمی‌گرداند و اطلاعات فعلی را جایگزین می‌کند.</div>
+        </div>
+      </div>
+
+      <div class="panel" id="panelCompany">
+        <h2 onclick="togglePanel('panelCompany')">🏢 تنظیمات شرکت <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="hint">این اطلاعات در هدر فاکتور نمایش داده می‌شود و روی این مرورگر ذخیره می‌ماند تا هر بار وارد نکنید.</div>
+          <div class="field">
+            <label>لوگو (اختیاری)</label>
+            <div class="logo-row">
+              <div class="logo-preview" id="logoPreviewBox"><span>بدون لوگو</span></div>
+              <input type="file" id="logoInput" accept="image/png,image/jpeg,image/webp" style="flex:1;">
+            </div>
+            <button type="button" class="btn ghost sm" id="removeLogoBtn" style="align-self:flex-start; display:none;">حذف لوگو</button>
+          </div>
+          <div class="field">
+            <label for="companyName">نام شرکت / فروشگاه</label>
+            <input type="text" id="companyName" placeholder="مثلاً: شرکت خدمات کولر گازی برتر">
+          </div>
+          <div class="field">
+            <label for="companyPhone">تلفن</label>
+            <input type="text" id="companyPhone" placeholder="مثلاً: ۰۲۱-۸۸۷۷۶۶۵۵">
+          </div>
+          <div class="field">
+            <label for="companyAddress">آدرس</label>
+            <input type="text" id="companyAddress" placeholder="آدرس کامل فروشگاه/دفتر">
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="companyEconomicId">شماره اقتصادی (اختیاری)</label>
+              <input type="text" id="companyEconomicId" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="companyNationalId">شناسه ملی (اختیاری)</label>
+              <input type="text" id="companyNationalId" inputmode="numeric">
+            </div>
+          </div>
+          <div class="field">
+            <label for="companyPostalCode">کد پستی (اختیاری)</label>
+            <input type="text" id="companyPostalCode" inputmode="numeric">
+          </div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer;">
+            <input type="checkbox" id="alwaysShowIds" style="width:15px; height:15px; margin:0;">
+            نمایش نام «شماره اقتصادی»، «شناسه ملی» و «کد پستی» روی فاکتور با جای خالی، حتی اگر پر نکرده باشید (برای تکمیل دستی)
+          </label>
+        </div>
+      </div>
+
+      <div class="panel" id="panelInvoiceInfo">
+        <h2 onclick="togglePanel('panelInvoiceInfo')">📄 اطلاعات فاکتور <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="row2">
+            <div class="field">
+              <label for="invNumber">شماره فاکتور</label>
+              <input type="text" id="invNumber" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="invDate">تاریخ</label>
+              <div class="date-field-wrap">
+                <input type="text" id="invDate" placeholder="مثلاً ۱۴۰۴/۰۴/۲۴">
+                <div class="date-step-btns">
+                  <button type="button" id="invDateUpBtn" class="date-step-btn" title="یک روز بعد">▲</button>
+                  <button type="button" id="invDateDownBtn" class="date-step-btn" title="یک روز قبل">▼</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="paidStatus">وضعیت پرداخت</label>
+            <select id="paidStatus" style="font-family:inherit; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:13.5px;">
+              <option value="" selected>در انتظار (چیزی روی فاکتور نمایش داده نمی‌شود)</option>
+              <option value="unpaid">پرداخت‌نشده</option>
+              <option value="paid">پرداخت‌شده</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="panelCustomer">
+        <h2 onclick="togglePanel('panelCustomer')">👤 اطلاعات مشتری <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="row2">
+            <div class="field">
+              <label for="custName">نام مشتری</label>
+              <input type="text" id="custName">
+            </div>
+            <div class="field">
+              <label for="custPhone">شماره تماس</label>
+              <input type="text" id="custPhone" inputmode="numeric">
+            </div>
+          </div>
+          <div class="field">
+            <label for="custAddress">آدرس</label>
+            <input type="text" id="custAddress">
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="custEconomicId">شماره اقتصادی (اختیاری)</label>
+              <input type="text" id="custEconomicId" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="custNationalId">شناسه/شماره ملی (اختیاری)</label>
+              <input type="text" id="custNationalId" inputmode="numeric">
+            </div>
+          </div>
+          <div class="field">
+            <label for="custPostalCode">کد پستی (اختیاری)</label>
+            <input type="text" id="custPostalCode" inputmode="numeric">
+          </div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer;">
+            <input type="checkbox" id="alwaysShowCustIds" style="width:15px; height:15px; margin:0;">
+            نمایش نام «شماره اقتصادی»، «شناسه/شماره ملی» و «کد پستی» مشتری روی فاکتور با جای خالی، حتی اگر پر نکرده باشید
+          </label>
+        </div>
+      </div>
+
+      <div class="panel" id="panelItems">
+        <h2 onclick="togglePanel('panelItems')">🧰 اقلام فاکتور <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="hint">شرح کالا/خدمات — تعداد/مقدار — واحد (اختیاری، مثلاً دستگاه، متر، عدد، کیلوگرم) — مبلغ واحد به <b>ریال</b>. برای «شرح»، می‌توانید از فهرست پیشنهادی انتخاب کنید یا خودتان آزادانه چیزی بنویسید. ستون «ارزش افزوده» هر ردیف بر اساس درصدی محاسبه می‌شود که در بخش «تخفیف و مالیات» وارد می‌کنید.</div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer;">
+            <input type="checkbox" id="showUnitColumn" checked style="width:15px; height:15px; margin:0;">
+            نمایش ستون «واحد» در جدول اقلام فاکتور
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer;">
+            <input type="checkbox" id="showVatColumn" checked style="width:15px; height:15px; margin:0;">
+            نمایش ستون «ارزش افزوده» در جدول اقلام فاکتور
+          </label>
+          <div class="items-wrap" id="itemsWrap"></div>
+          <button type="button" class="btn outline sm" id="addItemBtn" style="align-self:flex-start;">+ افزودن ردیف</button>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="panelPresets">
+        <h2 onclick="togglePanel('panelPresets')">🧩 مدیریت لیست پیشنهادی اقلام <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="hint">این‌ها همون گزینه‌هایی هستند که هنگام نوشتن «شرح کالا/خدمات» پیشنهاد داده می‌شوند. مورد جدید بنویسید و «ذخیره» را بزنید تا همیشگی به لیست اضافه شود. کنار هر مورد، ✕ حذف موقت (قابل بازگشت با دکمه پایین) و 🗑 حذف همیشگی (غیرقابل بازگشت) است.</div>
+          <div class="row2" style="align-items:end;">
+            <div class="field" style="grid-column:1/-1;">
+              <label for="newPresetInput">افزودن مورد جدید به لیست</label>
+              <input type="text" id="newPresetInput" placeholder="مثلاً: تعویض والف برفک‌گیر">
+            </div>
+          </div>
+          <button type="button" class="btn outline sm" id="addPresetBtn" style="align-self:flex-start;">💾 ذخیره</button>
+          <div id="presetManagerList" class="preset-manager-list"></div>
+          <button type="button" class="btn ghost sm" id="resetPresetsBtn" style="align-self:flex-start;">بازگردانی به لیست پیش‌فرض</button>
+        </div>
+      </div>
+
+      <datalist id="commonItemsList"></datalist>
+      <datalist id="commonUnitsList">
+        <option value="عدد">
+        <option value="دستگاه">
+        <option value="متر">
+        <option value="متر مربع">
+        <option value="کیلوگرم">
+        <option value="ساعت">
+        <option value="سری">
+        <option value="رول">
+        <option value="بسته">
+        <option value="لیتر">
+        <option value="جعبه">
+      </datalist>
+
+
+      <div class="panel" id="panelMoney">
+        <h2 onclick="togglePanel('panelMoney')">💰 تخفیف و مالیات <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="row2">
+            <div class="field">
+              <label for="discount">مبلغ تخفیف (ریال)</label>
+              <input type="text" id="discount" inputmode="numeric" placeholder="0">
+            </div>
+            <div class="field">
+              <label for="taxPercent">درصد مالیات و عوارض</label>
+              <input type="text" id="taxPercent" inputmode="numeric" placeholder="مثلاً 10">
+            </div>
+          </div>
+          <div class="field">
+            <label for="note">توضیحات (اختیاری)</label>
+            <textarea id="note" placeholder="مثلاً: گارانتی سه ماهه روی قطعات تعویض‌شده"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="sticky-actions">
+        <div class="totals-mini" id="totalsMini"></div>
+        <div class="action-btns">
+          <button type="button" class="btn" id="printBtn">⬇️ دریافت خروجی PDF</button>
+          <button type="button" class="btn outline" id="newInvoiceBtn">فاکتور جدید</button>
+        </div>
+        <div class="hint">دکمهٔ «دریافت خروجی PDF» پنجرهٔ چاپ مرورگر را باز می‌کند؛ در آن، مقصد را «Save as PDF» یا «ذخیره PDF» انتخاب کنید.</div>
+      </div>
+
+    </div>
+
+    <!-- ============ PREVIEW COLUMN ============ -->
+    <div class="preview-col">
+      <div class="sheet-shadow">
+        <div id="invoiceSheet"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="records-wrap">
+    <div class="panel" id="panelReport">
+      <h2 onclick="togglePanel('panelReport')">📊 گزارش درآمد <span class="arrow">▾</span></h2>
+      <div class="panel-body">
+        <div class="report-filter-row">
+          <button type="button" class="btn outline sm" data-range="today">امروز</button>
+          <button type="button" class="btn outline sm" data-range="week">۷ روز اخیر</button>
+          <button type="button" class="btn outline sm" data-range="month">۳۰ روز اخیر</button>
+          <button type="button" class="btn outline sm" data-range="all">کل بازه‌ها</button>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="reportFrom">از تاریخ (شمسی)</label>
+            <div class="date-field-wrap">
+              <input type="text" id="reportFrom" placeholder="مثلاً ۱۴۰۴/۰۴/۰۱">
+              <div class="date-step-btns">
+                <button type="button" id="reportFromUpBtn" class="date-step-btn" title="یک روز بعد">▲</button>
+                <button type="button" id="reportFromDownBtn" class="date-step-btn" title="یک روز قبل">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="reportTo">تا تاریخ (شمسی)</label>
+            <div class="date-field-wrap">
+              <input type="text" id="reportTo" placeholder="مثلاً ۱۴۰۴/۰۴/۳۰">
+              <div class="date-step-btns">
+                <button type="button" id="reportToUpBtn" class="date-step-btn" title="یک روز بعد">▲</button>
+                <button type="button" id="reportToDownBtn" class="date-step-btn" title="یک روز قبل">▼</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hint">تاریخ بر اساس زمانی است که هر فاکتور با دکمهٔ «دریافت خروجی PDF» ثبت شده؛ فیلد «تاریخ» روی خود فاکتور تأثیری در این گزارش ندارد.</div>
+        <div class="report-grid" id="reportGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="records-wrap">
+    <div class="panel" id="panelOverdue">
+      <h2 onclick="togglePanel('panelOverdue')">⏰ فاکتورهای معوق <span class="arrow">▾</span></h2>
+      <div class="panel-body">
+        <div class="row2" style="align-items:end;">
+          <div class="field">
+            <label for="overdueDays">بیش از چند روز از صدور گذشته باشد</label>
+            <input type="text" id="overdueDays" inputmode="numeric" value="3">
+          </div>
+        </div>
+        <div class="hint">فاکتورهایی که «پرداخت‌نشده» یا «در انتظار» هستند و بیش از این تعداد روز از صدورشان گذشته، اینجا نشان داده می‌شوند.</div>
+        <div id="overdueList" class="records-list"></div>
+        <div class="hint" id="overdueEmptyHint">فعلاً فاکتور معوقی وجود ندارد. 👌</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="records-wrap">
+    <div class="panel" id="panelCustomerProfile">
+      <h2 onclick="togglePanel('panelCustomerProfile')">👤 پروفایل مشتری <span class="arrow">▾</span></h2>
+      <div class="panel-body">
+        <div class="field">
+          <label for="customerProfileSearch">نام، شماره تلفن یا آدرس مشتری</label>
+          <input type="text" id="customerProfileSearch" placeholder="مثلاً: احمدی یا 0912... یا آزادی">
+        </div>
+        <div class="hint">با نام، شماره تلفن یا آدرس جست‌وجو کنید تا تاریخچه کامل خرید، جمع کل پول دریافتی، و وضعیت فاکتورهای همان مشتری را ببینید.</div>
+        <div id="customerProfileResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="records-wrap">
+    <div class="panel" id="panelRecords">
+      <h2 onclick="togglePanel('panelRecords')">📚 فاکتورهای ثبت‌شده <span class="arrow">▾</span></h2>
+      <div class="panel-body">
+        <div class="field">
+          <label for="recordSearch">جستجو بر اساس شماره فاکتور، نام، تلفن، آدرس یا مبلغ</label>
+          <input type="text" id="recordSearch" placeholder="مثلاً: 1002 یا احمدی یا 0912... یا 5000000">
+        </div>
+        <div id="recordsList" class="records-list"></div>
+        <div class="hint" id="recordsEmptyHint">هنوز فاکتوری ثبت نشده است. بعد از گرفتن خروجی PDF از یک فاکتور، اینجا ثبت می‌شود.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="records-wrap">
+    <div class="panel collapsed" id="panelTrash">
+      <h2 onclick="togglePanel('panelTrash')">🗑️ سطل زباله <span class="arrow">▾</span></h2>
+      <div class="panel-body">
+        <div class="hint">فاکتورهای حذف‌شده تا ۷ روز اینجا می‌مانند و قابل بازگردانی هستند؛ بعد از آن خودکار پاک می‌شوند.</div>
+        <div id="trashList" class="records-list"></div>
+        <div class="hint" id="trashEmptyHint">سطل زباله خالی است.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  function toFa(n){ return String(n).replace(/[0-9]/g, d => faDigits[d]); }
+  function escapeHtml(str){
+    if(str === null || str === undefined) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function formatMoney(n){
+    const num = Math.round(Number(n)||0);
+    return toFa(num.toLocaleString('en-US'));
+  }
+
+  // ---------- live thousand-separator formatting for money inputs (typed with . every 3 digits) ----------
+  const faNumsMap = '۰۱۲۳۴۵۶۷۸۹';
+  const arNumsMap = '٠١٢٣٤٥٦٧٨٩';
+  function normalizeDigits(str){
+    let out = '';
+    for(const ch of String(str||'')){
+      const fi = faNumsMap.indexOf(ch);
+      const ai = arNumsMap.indexOf(ch);
+      if(fi > -1) out += fi;
+      else if(ai > -1) out += ai;
+      else if(ch >= '0' && ch <= '9') out += ch;
+    }
+    return out;
+  }
+  function groupThousands(digitsStr){
+    const d = normalizeDigits(digitsStr);
+    if(!d) return '';
+    return d.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function moneyInput(input){
+    input.addEventListener('input', () => {
+      const grouped = groupThousands(input.value);
+      if(grouped !== input.value) input.value = grouped;
+    });
+  }
+
+  // ---------- storage (graceful fallback if blocked, e.g. inside sandboxed preview) ----------
+  const memStore = {};
+  const storage = {
+    get(key){
+      try{ return localStorage.getItem(key); }catch(e){ return memStore[key] ?? null; }
+    },
+    set(key, val){
+      try{ localStorage.setItem(key, val); }catch(e){ memStore[key] = val; }
+    }
+  };
+
+  // ---------- Jalali (Persian) date for default value ----------
+  function toJalali(gy, gm, gd){
+    const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+    let jy = (gy <= 1600) ? 0 : 979;
+    gy -= (gy <= 1600) ? 621 : 1600;
+    const gy2 = (gm > 2) ? (gy + 1) : gy;
+    let days = (365*gy) + (Math.floor((gy2+3)/4)) - (Math.floor((gy2+99)/100)) + (Math.floor((gy2+399)/400)) - 80 + gd + g_d_m[gm-1];
+    jy += 33*Math.floor(days/12053);
+    days %= 12053;
+    jy += 4*Math.floor(days/1461);
+    days %= 1461;
+    if (days > 365){ jy += Math.floor((days-1)/365); days = (days-1)%365; }
+    const jm = (days < 186) ? 1+Math.floor(days/31) : 7+Math.floor((days-186)/30);
+    const jd = 1 + ((days < 186) ? (days%31) : ((days-186)%30));
+    return [jy, jm, jd];
+  }
+  function todayJalaliString(){
+    const now = new Date();
+    const [jy, jm, jd] = toJalali(now.getFullYear(), now.getMonth()+1, now.getDate());
+    const pad = (n) => String(n).padStart(2,'0');
+    return toFa(`${jy}/${pad(jm)}/${pad(jd)}`);
+  }
+
+  // تبدیل تاریخ شمسی به میلادی (الگوریتم استاندارد jalaali)، برای فیلترهای گزارش که تاریخ‌شان به‌صورت متن شمسی وارد می‌شود
+  function jalaliToGregorian(jy, jm, jd){
+    jy = parseInt(jy, 10); jm = parseInt(jm, 10); jd = parseInt(jd, 10);
+    let gy = (jy <= 979) ? 621 : 1600;
+    jy -= (jy <= 979) ? 0 : 979;
+    let days = (365 * jy) + (Math.floor(jy / 33) * 8) + Math.floor(((jy % 33) + 3) / 4) + 78 + jd +
+      ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+    gy += 400 * Math.floor(days / 146097);
+    days %= 146097;
+    if(days > 36524){
+      gy += 100 * Math.floor(--days / 36524);
+      days %= 36524;
+      if(days >= 365) days++;
+    }
+    gy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if(days > 365){
+      gy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    let gd = days + 1;
+    const isLeap = (gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0);
+    const monthDays = [0, 31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0;
+    for(gm = 1; gm <= 12; gm++){
+      if(gd <= monthDays[gm]) break;
+      gd -= monthDays[gm];
+    }
+    return [gy, gm, gd];
+  }
+
+  function toEnglishDigitsKeepOthers(str){
+    let out = '';
+    for(const ch of String(str||'')){
+      const fi = faNumsMap.indexOf(ch);
+      const ai = arNumsMap.indexOf(ch);
+      if(fi > -1) out += fi;
+      else if(ai > -1) out += ai;
+      else out += ch;
+    }
+    return out;
+  }
+  function parseJalaliDateStr(str){
+    const s = toEnglishDigitsKeepOthers(str || '').trim();
+    const parts = s.split(/[^\d]+/).filter(Boolean);
+    if(parts.length < 3) return null;
+    const jy = parseInt(parts[0], 10), jm = parseInt(parts[1], 10), jd = parseInt(parts[2], 10);
+    if(!jy || !jm || !jd || jm < 1 || jm > 12 || jd < 1 || jd > 31) return null;
+    return [jy, jm, jd];
+  }
+  function jalaliStrToTimestamp(str, endOfDay){
+    const parsed = parseJalaliDateStr(str);
+    if(!parsed) return null;
+    const [gy, gm, gd] = jalaliToGregorian(parsed[0], parsed[1], parsed[2]);
+    const d = endOfDay ? new Date(gy, gm - 1, gd, 23, 59, 59, 999) : new Date(gy, gm - 1, gd, 0, 0, 0, 0);
+    return d.getTime();
+  }
+  function toJalaliInputValue(d){
+    const [jy, jm, jd] = toJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    const pad = (n) => String(n).padStart(2, '0');
+    return toFa(`${jy}/${pad(jm)}/${pad(jd)}`);
+  }
+
+  // ---------- panel collapse ----------
+  window.togglePanel = function(id){
+    document.getElementById(id).classList.toggle('collapsed');
+  };
+
+  function showToast(msg){
+    let t = document.getElementById('miniToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'miniToast';
+      t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:100px; font-size:12.5px; z-index:9999; opacity:0; transition:opacity .2s;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._hideTimer);
+    t._hideTimer = setTimeout(() => { t.style.opacity = '0'; }, 1800);
+  }
+
+  // ---------- element refs ----------
+  const el = (id) => document.getElementById(id);
+  const companyFields = ['companyName','companyPhone','companyAddress','companyEconomicId','companyNationalId','companyPostalCode'];
+  let logoDataUrl = storage.get('inv_logo') || '';
+
+  // ---------- load persisted company settings ----------
+  companyFields.forEach(id => {
+    const v = storage.get('inv_' + id);
+    if(v !== null) el(id).value = v;
+  });
+  companyFields.forEach(id => {
+    el(id).addEventListener('input', () => { storage.set('inv_' + id, el(id).value); renderPreview(); });
+  });
+
+  // ---------- always-show-ids checkbox ----------
+  el('alwaysShowIds').checked = storage.get('inv_alwaysShowIds') === '1';
+  el('alwaysShowIds').addEventListener('change', () => {
+    storage.set('inv_alwaysShowIds', el('alwaysShowIds').checked ? '1' : '0');
+    renderPreview();
+  });
+  el('alwaysShowCustIds').checked = storage.get('inv_alwaysShowCustIds') === '1';
+  el('alwaysShowCustIds').addEventListener('change', () => {
+    storage.set('inv_alwaysShowCustIds', el('alwaysShowCustIds').checked ? '1' : '0');
+    renderPreview();
+  });
+
+  function updateLogoPreviewBox(){
+    const box = el('logoPreviewBox');
+    const removeBtn = el('removeLogoBtn');
+    if(logoDataUrl){
+      box.innerHTML = '<img src="' + logoDataUrl + '" alt="لوگو">';
+      removeBtn.style.display = 'inline-block';
+    } else {
+      box.innerHTML = '<span>بدون لوگو</span>';
+      removeBtn.style.display = 'none';
+    }
+  }
+  updateLogoPreviewBox();
+
+  el('logoInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(file.size > 1.2*1024*1024){
+      alert('حجم تصویر باید کمتر از ۱.۲ مگابایت باشد.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      logoDataUrl = reader.result;
+      storage.set('inv_logo', logoDataUrl);
+      updateLogoPreviewBox();
+      renderPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  el('removeLogoBtn').addEventListener('click', () => {
+    logoDataUrl = '';
+    storage.set('inv_logo', '');
+    el('logoInput').value = '';
+    updateLogoPreviewBox();
+    renderPreview();
+  });
+
+  // ---------- invoice number ----------
+  function nextInvoiceNumber(){
+    const last = parseInt(storage.get('inv_last_number') || '1000', 10);
+    return last + 1;
+  }
+  el('invNumber').value = nextInvoiceNumber();
+  el('invDate').value = todayJalaliString();
+
+  // ---------- generic date up/down stepper (works even if the keyboard only types English digits) ----------
+  function shiftDateField(inputId, deltaDays, onAfterChange){
+    const input = el(inputId);
+    let parsed = parseJalaliDateStr(input.value);
+    if(!parsed){
+      const now = new Date();
+      parsed = toJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    }
+    const [gy, gm, gd] = jalaliToGregorian(parsed[0], parsed[1], parsed[2]);
+    const d = new Date(gy, gm - 1, gd);
+    d.setDate(d.getDate() + deltaDays);
+    input.value = toJalaliInputValue(d);
+    if(onAfterChange) onAfterChange();
+  }
+  function wireDateStepper(inputId, upBtnId, downBtnId, onAfterChange){
+    el(upBtnId).addEventListener('click', () => shiftDateField(inputId, 1, onAfterChange));
+    el(downBtnId).addEventListener('click', () => shiftDateField(inputId, -1, onAfterChange));
+    el(inputId).addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowUp'){ e.preventDefault(); shiftDateField(inputId, 1, onAfterChange); }
+      else if(e.key === 'ArrowDown'){ e.preventDefault(); shiftDateField(inputId, -1, onAfterChange); }
+    });
+  }
+  wireDateStepper('invDate', 'invDateUpBtn', 'invDateDownBtn', renderPreview);
+
+  // ---------- suggested item presets (editable list) ----------
+  const DEFAULT_PRESETS = [
+    'سرویس پنل داخلی','نصب و تعویض خازن','تعویض موتور دمپر',
+    'سرویس کولر اسپلیت (یونیت داخلی و بیرونی)','لوله مسی، عایق و پرایمر',
+    'هزینه نصب و وکیوم کولر اسپلیت','پایه کولر گازی','سوراخ‌کاری دیوار',
+    'سرویس کولر اسپلیت','شارژ گاز تکمیلی','نشتی‌یابی، وکیوم و شارژ گاز',
+    'تعمیر و تعویض سیم کنتاکتور','عیب‌یابی و تعویض خازن','سرویس کولر پنجره‌ای',
+    'اجرت پک کردن و جمع‌آوری کولر','اجرت نصب کولر گازی','لوله مسی، عایق، پرایمر و کابل',
+    'کابل ۵×۱.۵','پرایمر','شلنگ درین','جوشکاری دو سر',
+    'تعمیر برد و هزینه باز و بسته کردن برد','کنترل همه‌کاره','ایاب و ذهاب',
+    'تعویض کمپرسور','تعویض کاپاسیتور کمپرسور','شستشوی یونیت داخلی و بیرونی',
+    'تعویض فیلتر هوا','تعویض فن (موتور پروانه)','تعویض ریموت کنترل',
+    'نصب براکت یونیت بیرونی','کابل‌کشی برق کولر','بازدید و کارشناسی محل',
+    'حمل و نقل کولر','تعویض ترموستات','تمیزکاری فیلتر و بدنه کولر',
+    'تست عملکرد و بازدید نهایی پس از سرویس',
+  ];
+
+  // مدل ذخیره‌سازی: یک لیست پایه (base) که با «ذخیره» بزرگ‌تر می‌شود و برای همیشه می‌ماند،
+  // به‌علاوه یک لیست حذف‌شده‌ها (removed) که فقط با دکمهٔ ✕ ساخته می‌شود.
+  // «بازگردانی به لیست پیش‌فرض» فقط حذف‌شده‌ها را برمی‌گرداند؛ هر چیزی که با «ذخیره» اضافه شده همیشه در لیست پایه می‌ماند.
+  function loadBasePresets(){
+    try{
+      const raw = storage.get('inv_presets_base');
+      if(raw === null){ saveBasePresets(DEFAULT_PRESETS); return DEFAULT_PRESETS.slice(); }
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : DEFAULT_PRESETS.slice();
+    }catch(e){ return DEFAULT_PRESETS.slice(); }
+  }
+  function saveBasePresets(arr){ storage.set('inv_presets_base', JSON.stringify(arr)); }
+  function loadRemovedDefaults(){
+    try{ return JSON.parse(storage.get('inv_presets_removed') || '[]'); }catch(e){ return []; }
+  }
+  function saveRemovedDefaults(arr){ storage.set('inv_presets_removed', JSON.stringify(arr)); }
+
+  function loadPresets(){
+    const base = loadBasePresets();
+    const removed = loadRemovedDefaults();
+    return base.filter(p => !removed.includes(p));
+  }
+
+  // مهاجرت یک‌باره از قالب‌های ذخیره‌سازی قدیمی‌تر، در صورت وجود داده قدیمی
+  (function migrateOldPresetFormats(){
+    if(storage.get('inv_presets_base') !== null) return;
+    const oldCustom = storage.get('inv_presets_custom');
+    const oldSingle = storage.get('inv_presets');
+    if(oldCustom !== null){
+      try{
+        const custom = JSON.parse(oldCustom) || [];
+        saveBasePresets(DEFAULT_PRESETS.concat(custom.filter(p => !DEFAULT_PRESETS.includes(p))));
+      }catch(e){ saveBasePresets(DEFAULT_PRESETS); }
+    } else if(oldSingle !== null){
+      try{
+        const arr = JSON.parse(oldSingle);
+        if(Array.isArray(arr)) saveBasePresets(DEFAULT_PRESETS.concat(arr.filter(p => !DEFAULT_PRESETS.includes(p))));
+      }catch(e){ /* نادیده گرفتن داده خراب */ }
+    }
+  })();
+
+  function addPresetValue(val){
+    val = val.trim();
+    if(!val) return;
+    const base = loadBasePresets();
+    if(!base.includes(val)){
+      base.push(val);
+      saveBasePresets(base);
+    }
+    // اگر قبلاً حذف شده بود، از فهرست حذف‌شده‌ها برش می‌داریم تا دوباره دیده شود
+    saveRemovedDefaults(loadRemovedDefaults().filter(p => p !== val));
+  }
+  function removePresetValue(val){
+    const removed = loadRemovedDefaults();
+    if(!removed.includes(val)) removed.push(val);
+    saveRemovedDefaults(removed);
+  }
+  function permanentDeletePreset(val){
+    saveBasePresets(loadBasePresets().filter(p => p !== val));
+    saveRemovedDefaults(loadRemovedDefaults().filter(p => p !== val));
+  }
+
+  function renderDatalist(){
+    const presets = loadPresets();
+    el('commonItemsList').innerHTML = presets.map(p => `<option value="${escapeHtml(p)}">`).join('');
+  }
+
+  function renderPresetManagerList(){
+    const presets = loadPresets();
+    const wrap = el('presetManagerList');
+    if(presets.length === 0){
+      wrap.innerHTML = '<div class="hint">لیست خالی است.</div>';
+      return;
+    }
+    wrap.innerHTML = presets.map(p => `
+      <span class="preset-chip">
+        ${escapeHtml(p)}
+        <button type="button" data-val="${escapeHtml(p)}" title="حذف موقت (با «بازگردانی به پیش‌فرض» برمی‌گردد)">✕</button>
+        <button type="button" class="perm-del" data-val="${escapeHtml(p)}" title="حذف همیشگی (حتی با بازگردانی هم برنمی‌گردد)">🗑</button>
+      </span>`).join('');
+  }
+
+  el('addPresetBtn').addEventListener('click', () => {
+    const input = el('newPresetInput');
+    if(!input.value.trim()) return;
+    addPresetValue(input.value);
+    input.value = '';
+    renderDatalist();
+    renderPresetManagerList();
+    showToast('به لیست اضافه و ذخیره شد');
+  });
+  el('newPresetInput').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); el('addPresetBtn').click(); }
+  });
+
+  el('presetManagerList').addEventListener('click', (e) => {
+    const permBtn = e.target.closest('button.perm-del');
+    if(permBtn){
+      const val = permBtn.getAttribute('data-val');
+      if(!confirm(`«${val}» برای همیشه از لیست حذف شود؟ حتی با «بازگردانی به پیش‌فرض» هم برنمی‌گردد.`)) return;
+      permanentDeletePreset(val);
+      renderDatalist();
+      renderPresetManagerList();
+      return;
+    }
+    const btn = e.target.closest('button[data-val]');
+    if(!btn) return;
+    removePresetValue(btn.getAttribute('data-val'));
+    renderDatalist();
+    renderPresetManagerList();
+  });
+
+  el('resetPresetsBtn').addEventListener('click', () => {
+    if(!confirm('همه موارد حذف‌شده به لیست برمی‌گردند (شامل مواردی که خودتان با دکمهٔ «ذخیره» اضافه کرده بودید؛ موارد حذف‌شدهٔ همیشگی برنمی‌گردند). ادامه می‌دهید؟')) return;
+    saveRemovedDefaults([]);
+    renderDatalist();
+    renderPresetManagerList();
+  });
+
+  renderDatalist();
+  renderPresetManagerList();
+
+  // ---------- items ----------
+  let itemSeq = 0;
+  function addItemRow(desc, qty, price, detail, useCustomTax, customTaxPercent, unit){
+    itemSeq++;
+    const rid = 'item-' + itemSeq;
+    const wrap = document.createElement('div');
+    wrap.className = 'item-row';
+    wrap.id = rid;
+    const taxOn = !!useCustomTax;
+    wrap.innerHTML = `
+      <div class="item-row-main">
+        <input type="text" class="it-desc" list="commonItemsList" placeholder="شرح کالا / خدمات (یا از فهرست انتخاب کنید)" value="${escapeHtml(desc||'')}">
+        <input type="text" class="it-qty" inputmode="decimal" placeholder="تعداد (اعشاری هم مجاز است)" value="${qty||1}">
+        <input type="text" class="it-unit" list="commonUnitsList" placeholder="واحد" value="${escapeHtml(unit || '')}" title="واحد این ردیف (اختیاری، مثلاً دستگاه، متر، عدد، کیلوگرم)">
+        <input type="text" class="it-price" inputmode="numeric" placeholder="قیمت واحد (ریال)" value="${price ? groupThousands(price) : ''}">
+        <button type="button" class="remove-btn" title="حذف ردیف">✕</button>
+      </div>
+      <input type="text" class="it-detail" placeholder="جزئیات بیشتر این ردیف (اختیاری)" value="${escapeHtml(detail||'')}">
+      <div class="item-tax-row">
+        <label class="item-tax-toggle">
+          <input type="checkbox" class="it-tax-toggle" ${taxOn ? 'checked' : ''}>
+          🧾 مالیات جداگانه برای این ردیف
+        </label>
+        <input type="text" class="it-tax-percent" inputmode="numeric" placeholder="٪ مالیات این ردیف" value="${customTaxPercent !== undefined && customTaxPercent !== null ? customTaxPercent : ''}" style="display:${taxOn ? 'block' : 'none'};">
+      </div>
+    `;
+    el('itemsWrap').appendChild(wrap);
+    wrap.querySelector('.remove-btn').addEventListener('click', () => { wrap.remove(); renderPreview(); });
+    moneyInput(wrap.querySelector('.it-price'));
+    decimalQtyInput(wrap.querySelector('.it-qty'));
+    const taxToggle = wrap.querySelector('.it-tax-toggle');
+    const taxInput = wrap.querySelector('.it-tax-percent');
+    digitsOnly(taxInput);
+    taxToggle.addEventListener('change', () => {
+      taxInput.style.display = taxToggle.checked ? 'block' : 'none';
+      if(taxToggle.checked) taxInput.focus();
+      renderPreview();
+    });
+    wrap.querySelectorAll('input').forEach(inp => inp.addEventListener('input', renderPreview));
+    return wrap;
+  }
+  function readItems(){
+    const rows = document.querySelectorAll('#itemsWrap .item-row');
+    const items = [];
+    rows.forEach(row => {
+      const description = row.querySelector('.it-desc').value.trim();
+      const detail = row.querySelector('.it-detail').value.trim();
+      const qty = Number(row.querySelector('.it-qty').value) || 0;
+      const unit = row.querySelector('.it-unit').value.trim();
+      const unitPrice = Number(normalizeDigits(row.querySelector('.it-price').value)) || 0;
+      const useCustomTax = row.querySelector('.it-tax-toggle').checked;
+      const customTaxPercent = useCustomTax ? (Number(row.querySelector('.it-tax-percent').value) || 0) : null;
+      if(description) items.push({description, detail, qty, unit, unitPrice, useCustomTax, customTaxPercent});
+    });
+    return items;
+  }
+  el('addItemBtn').addEventListener('click', () => { addItemRow(); renderPreview(); });
+  addItemRow('', 1, '');
+
+  ['discount','taxPercent','note','invNumber','invDate','custName','custPhone','custAddress','custEconomicId','custNationalId','custPostalCode','paidStatus'].forEach(id => {
+    el(id).addEventListener('input', renderPreview);
+    el(id).addEventListener('change', renderPreview);
+  });
+
+  // digits-only helper
+  function digitsOnly(input){
+    input.addEventListener('input', () => {
+      const cleaned = input.value.replace(/[^0-9]/g,'');
+      if(cleaned !== input.value) input.value = cleaned;
+    });
+  }
+  ['companyEconomicId','companyNationalId','companyPostalCode','custPhone','custEconomicId','custNationalId','custPostalCode','taxPercent','invNumber','overdueDays'].forEach(id => digitsOnly(el(id)));
+  moneyInput(el('discount'));
+
+  function decimalQtyInput(input){
+    input.addEventListener('input', () => {
+      let v = toEnglishDigitsKeepOthers(input.value);
+      v = v.replace(/[^0-9.]/g, '');
+      const firstDot = v.indexOf('.');
+      if(firstDot !== -1){
+        v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, '');
+      }
+      if(v !== input.value) input.value = v;
+    });
+  }
+
+  // ---------- totals ----------
+  function computeTotals(){
+    const items = readItems();
+    const subtotal = items.reduce((s,it)=> s + it.qty*it.unitPrice, 0);
+    const discount = Math.max(0, Number(normalizeDigits(el('discount').value)) || 0);
+    const afterDiscount = Math.max(0, subtotal - discount);
+    const taxPercent = Math.max(0, Number(el('taxPercent').value) || 0);
+    const hasMixedTax = items.some(it => it.useCustomTax);
+    const taxAmount = items.reduce((s, it) => {
+      const rate = it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : taxPercent;
+      return s + Math.round(it.qty * it.unitPrice * rate / 100);
+    }, 0);
+    const grandTotal = afterDiscount + taxAmount;
+    return { items, subtotal, discount, afterDiscount, taxPercent, taxAmount, grandTotal, hasMixedTax };
+  }
+
+  // ---------- render preview ----------
+  function renderPreview(){
+    const t = computeTotals();
+    const payStatus = el('paidStatus').value; // '' | 'paid' | 'unpaid'
+
+    const showVat = el('showVatColumn').checked;
+    const showUnit = el('showUnitColumn').checked;
+    const rows = t.items.map((it, idx) => {
+      const lineTotal = it.qty * it.unitPrice;
+      const rowRate = it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : t.taxPercent;
+      const lineVat = Math.round(lineTotal * rowRate / 100);
+      const vatLabel = it.useCustomTax ? `${formatMoney(lineVat)}<div class="item-detail-line">(٪${toFa(rowRate)} جداگانه)</div>` : formatMoney(lineVat);
+      const unitLabel = it.unit ? escapeHtml(it.unit) : '—';
+      return `
+      <tr>
+        <td class="c-center">${toFa(idx+1)}</td>
+        <td>${escapeHtml(it.description)}${it.detail ? `<div class="item-detail-line">${escapeHtml(it.detail)}</div>` : ''}</td>
+        <td class="c-center">${toFa(it.qty)}</td>
+        ${showUnit ? `<td class="c-center">${unitLabel}</td>` : ''}
+        <td class="c-left">${formatMoney(it.unitPrice)}</td>
+        <td class="c-left">${formatMoney(lineTotal)}</td>
+        ${showVat ? `<td class="c-left">${vatLabel}</td>` : ''}
+      </tr>`;
+    }).join('') || `<tr class="empty-row"><td colspan="${5 + (showUnit?1:0) + (showVat?1:0)}">هنوز ردیفی اضافه نشده است</td></tr>`;
+
+    const companyName = escapeHtml(el('companyName').value || 'نام شرکت شما');
+    const companyAddress = escapeHtml(el('companyAddress').value || '—');
+    const companyPhone = escapeHtml(el('companyPhone').value || '—');
+    const economicId = el('companyEconomicId').value.trim();
+    const nationalId = el('companyNationalId').value.trim();
+    const postalCode = el('companyPostalCode').value.trim();
+    const alwaysShowIds = el('alwaysShowIds').checked;
+    const showEconomic = economicId || alwaysShowIds;
+    const showNational = nationalId || alwaysShowIds;
+    const showPostal = postalCode || alwaysShowIds;
+    const idsRow = (showEconomic || showNational || showPostal) ? `
+      <div class="inv-brand-ids">
+        ${showEconomic ? '<span>شماره اقتصادی: ' + (economicId ? toFa(escapeHtml(economicId)) : '—') + '</span>' : ''}
+        ${showNational ? '<span>شناسه ملی: ' + (nationalId ? toFa(escapeHtml(nationalId)) : '—') + '</span>' : ''}
+        ${showPostal ? '<span>کد پستی: ' + (postalCode ? toFa(escapeHtml(postalCode)) : '—') + '</span>' : ''}
+      </div>` : '';
+    const logoHtml = logoDataUrl ? `<img src="${logoDataUrl}" alt="لوگو">` : '';
+
+    const custEconomicId = el('custEconomicId').value.trim();
+    const custNationalId = el('custNationalId').value.trim();
+    const custPostalCode = el('custPostalCode').value.trim();
+    const alwaysShowCustIds = el('alwaysShowCustIds').checked;
+    const custShowEconomic = custEconomicId || alwaysShowCustIds;
+    const custShowNational = custNationalId || alwaysShowCustIds;
+    const custShowPostal = custPostalCode || alwaysShowCustIds;
+
+    el('invoiceSheet').innerHTML = `
+      <div class="inv-header">
+        <div class="inv-brand">
+          ${logoHtml}
+          <div>
+            <div class="inv-brand-name">${companyName}</div>
+            <div class="inv-brand-sub">${companyAddress} &nbsp;|&nbsp; ${companyPhone}</div>
+            ${idsRow}
+          </div>
+        </div>
+        <div class="inv-meta">
+          <div class="num">فاکتور شماره ${toFa(el('invNumber').value || '')}</div>
+          <div>تاریخ: ${escapeHtml(el('invDate').value || '')}</div>
+          <div>${payStatus ? `<span class="inv-badge ${payStatus}">${payStatus === 'paid' ? '✅ پرداخت‌شده' : '⏳ پرداخت‌نشده'}</span>` : ''}</div>
+        </div>
+      </div>
+
+      <div class="cust-box">
+        <div><div class="lbl">نام مشتری</div><div class="val">${escapeHtml(el('custName').value || '—')}</div></div>
+        <div><div class="lbl">شماره تماس</div><div class="val">${escapeHtml(el('custPhone').value || '—')}</div></div>
+        <div style="grid-column:1/-1;"><div class="lbl">آدرس</div><div class="val">${escapeHtml(el('custAddress').value || '—')}</div></div>
+        ${custShowEconomic ? `<div><div class="lbl">شماره اقتصادی</div><div class="val">${custEconomicId ? escapeHtml(custEconomicId) : '—'}</div></div>` : ''}
+        ${custShowNational ? `<div><div class="lbl">شناسه/شماره ملی</div><div class="val">${custNationalId ? escapeHtml(custNationalId) : '—'}</div></div>` : ''}
+        ${custShowPostal ? `<div><div class="lbl">کد پستی</div><div class="val">${custPostalCode ? escapeHtml(custPostalCode) : '—'}</div></div>` : ''}
+      </div>
+
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th style="width:32px;">ردیف</th>
+            <th>شرح کالا / خدمات</th>
+            <th style="width:54px;">تعداد / مقدار</th>
+            ${showUnit ? '<th style="width:60px;">واحد</th>' : ''}
+            <th style="width:105px;">مبلغ واحد (ریال)</th>
+            <th style="width:110px;">قیمت کل (ریال)</th>
+            ${showVat ? '<th style="width:110px;">ارزش افزوده (ریال)</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="inv-totals">
+        <div><span>جمع کل</span><span>${formatMoney(t.subtotal)} ریال</span></div>
+        <div class="subtle"><span>مبلغ تخفیف</span><span>${t.discount>0?'−':''}${formatMoney(t.discount)} ریال</span></div>
+        <div class="divider"></div>
+        <div><span>مبلغ کل پس از تخفیف</span><span>${formatMoney(t.afterDiscount)} ریال</span></div>
+        <div class="subtle"><span>جمع مالیات و عوارض${t.hasMixedTax ? ' (نرخ‌های متفاوت)' : ' (' + toFa(t.taxPercent) + '٪)'}</span><span>${formatMoney(t.taxAmount)} ریال</span></div>
+        <div class="grand"><span>مبلغ نهایی قابل پرداخت</span><span>${formatMoney(t.grandTotal)} ریال</span></div>
+      </div>
+
+      ${el('note').value.trim() ? `<div class="inv-note"><b>توضیحات:</b> ${escapeHtml(el('note').value.trim())}</div>` : ''}
+
+      <div class="inv-footer">
+        <div class="sig">امضای کارشناس<div class="sig-line"></div></div>
+        <div class="sig">امضا/مهر مشتری<div class="sig-line"></div></div>
+      </div>
+    `;
+
+    // mini totals in the sticky action bar
+    el('totalsMini').innerHTML = `
+      <div><span>جمع کل</span><span>${formatMoney(t.subtotal)} ریال</span></div>
+      <div><span>مالیات${t.hasMixedTax ? ' (نرخ‌های متفاوت)' : ' (' + toFa(t.taxPercent) + '٪)'}</span><span>${formatMoney(t.taxAmount)} ریال</span></div>
+      <div class="grand"><span>مبلغ نهایی</span><span>${formatMoney(t.grandTotal)} ریال</span></div>
+    `;
+  }
+
+  // ---------- print / PDF ----------
+  el('printBtn').addEventListener('click', () => {
+    saveCurrentAsRecord();
+    window.print();
+  });
+
+  // ---------- new invoice ----------
+  el('newInvoiceBtn').addEventListener('click', () => {
+    if(!confirm('یک فاکتور جدید و خالی شروع شود؟ (اطلاعات شرکت حفظ می‌ماند)')) return;
+    editingRecordId = null;
+    el('editingBanner').style.display = 'none';
+    const currentNum = parseInt(el('invNumber').value, 10) || nextInvoiceNumber();
+    storage.set('inv_last_number', String(currentNum));
+    el('invNumber').value = currentNum + 1;
+    el('invDate').value = todayJalaliString();
+    el('custName').value = '';
+    el('custPhone').value = '';
+    el('custAddress').value = '';
+    el('custEconomicId').value = '';
+    el('custNationalId').value = '';
+    el('custPostalCode').value = '';
+    el('discount').value = '';
+    el('taxPercent').value = '';
+    el('note').value = '';
+    el('paidStatus').value = '';
+    el('itemsWrap').innerHTML = '';
+    addItemRow('', 1, '');
+    renderPreview();
+  });
+
+  // ---------- Invoice records (saved invoices list) ----------
+  let editingRecordId = null;
+
+  function loadRecords(){
+    try{ return JSON.parse(storage.get('inv_records') || '[]'); }
+    catch(e){ return []; }
+  }
+  function saveRecordsArr(arr){ storage.set('inv_records', JSON.stringify(arr)); }
+
+  // ---------- trash bin (soft-delete, recoverable for 7 days) ----------
+  const TRASH_DAYS = 7;
+  function loadTrash(){
+    try{ return JSON.parse(storage.get('inv_trash') || '[]'); }
+    catch(e){ return []; }
+  }
+  function saveTrash(arr){ storage.set('inv_trash', JSON.stringify(arr)); }
+
+  function purgeOldTrash(){
+    const trash = loadTrash();
+    const kept = trash.filter(r => daysSince(r.deletedAt) < TRASH_DAYS);
+    if(kept.length !== trash.length) saveTrash(kept);
+    return kept;
+  }
+  function moveRecordToTrash(id){
+    const records = loadRecords();
+    const idx = records.findIndex(r => r.id === id);
+    if(idx === -1) return;
+    const [record] = records.splice(idx, 1);
+    saveRecordsArr(records);
+    record.deletedAt = Date.now();
+    const trash = loadTrash();
+    trash.unshift(record);
+    saveTrash(trash);
+  }
+  function restoreFromTrash(id){
+    const trash = loadTrash();
+    const idx = trash.findIndex(r => r.id === id);
+    if(idx === -1) return;
+    const [record] = trash.splice(idx, 1);
+    delete record.deletedAt;
+    saveTrash(trash);
+    const records = loadRecords();
+    records.unshift(record);
+    saveRecordsArr(records);
+  }
+  function permanentlyDeleteFromTrash(id){
+    saveTrash(loadTrash().filter(r => r.id !== id));
+  }
+
+  function renderTrashList(){
+    const trash = purgeOldTrash();
+    const listEl = el('trashList');
+    const emptyHint = el('trashEmptyHint');
+    if(!listEl) return;
+    if(trash.length === 0){
+      listEl.innerHTML = '';
+      emptyHint.style.display = 'block';
+      return;
+    }
+    emptyHint.style.display = 'none';
+    listEl.innerHTML = trash.map(r => {
+      const daysLeft = Math.max(0, TRASH_DAYS - daysSince(r.deletedAt));
+      return `
+        <div class="record-card" data-id="${r.id}">
+          <div class="record-main">
+            <div class="record-title">فاکتور ${escapeHtml(r.invNumber || '—')} — ${escapeHtml(r.custName || 'بدون نام')}</div>
+            <div class="record-sub">${escapeHtml(r.custPhone || '')} · تا ${toFa(daysLeft)} روز دیگر قابل بازگردانی</div>
+          </div>
+          <div class="record-right">
+            <span class="record-amount">${formatMoney(r.total)} ریال</span>
+            <button type="button" class="btn outline sm" data-restore="${r.id}">↩️ بازگردانی</button>
+            <button type="button" class="record-delete" data-perm-del="${r.id}" title="حذف همیشگی">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function collectFormData(){
+    return {
+      invNumber: el('invNumber').value.trim(),
+      invDate: el('invDate').value.trim(),
+      paidStatus: el('paidStatus').value,
+      custName: el('custName').value.trim(),
+      custPhone: el('custPhone').value.trim(),
+      custAddress: el('custAddress').value.trim(),
+      custEconomicId: el('custEconomicId').value.trim(),
+      custNationalId: el('custNationalId').value.trim(),
+      custPostalCode: el('custPostalCode').value.trim(),
+      alwaysShowCustIds: el('alwaysShowCustIds').checked,
+      items: readItems(),
+      discount: normalizeDigits(el('discount').value),
+      taxPercent: el('taxPercent').value.trim(),
+      note: el('note').value.trim(),
+    };
+  }
+
+  function saveCurrentAsRecord(){
+    const data = collectFormData();
+    if(!data.custName && !data.invNumber) return;
+    const t = computeTotals();
+    const records = loadRecords();
+    const id = editingRecordId || (Date.now() + '-' + Math.random().toString(36).slice(2,8));
+    const existing = records.find(r => r.id === id);
+    const savedAt = existing ? existing.savedAt : Date.now();
+    const record = Object.assign({ id, total: t.grandTotal, savedAt, updatedAt: Date.now() }, data);
+    const idx = records.findIndex(r => r.id === id);
+    if(idx > -1) records[idx] = record; else records.unshift(record);
+    saveRecordsArr(records);
+    editingRecordId = id;
+    renderRecordsList(el('recordSearch').value);
+    renderReport();
+    renderOverdueList();
+    renderCustomerProfile();
+  }
+
+  function statusInfo(paidStatus){
+    if(paidStatus === 'paid') return { cls:'paid', label:'پرداخت‌شده' };
+    if(paidStatus === 'unpaid') return { cls:'unpaid', label:'پرداخت‌نشده' };
+    return { cls:'pending', label:'در انتظار' };
+  }
+
+  function quickStatusSelectHtml(r){
+    const s = statusInfo(r.paidStatus);
+    const cur = r.paidStatus || '';
+    return `
+      <select class="quick-status-select ${s.cls}" data-id="${r.id}" title="تغییر سریع وضعیت پرداخت">
+        <option value="" ${cur === '' ? 'selected' : ''}>🕓 در انتظار</option>
+        <option value="unpaid" ${cur === 'unpaid' ? 'selected' : ''}>⏳ پرداخت‌نشده</option>
+        <option value="paid" ${cur === 'paid' ? 'selected' : ''}>✅ پرداخت‌شده</option>
+      </select>`;
+  }
+
+  function updateRecordStatus(id, newStatus){
+    const records = loadRecords();
+    const idx = records.findIndex(r => r.id === id);
+    if(idx === -1) return;
+    records[idx].paidStatus = newStatus;
+    if(newStatus === 'paid') records[idx].paidAt = Date.now();
+    saveRecordsArr(records);
+    if(editingRecordId === id) el('paidStatus').value = newStatus;
+    renderRecordsList(el('recordSearch').value);
+    renderReport();
+    renderOverdueList();
+    renderCustomerProfile();
+    showToast('وضعیت پرداخت به‌روزرسانی شد');
+  }
+
+  document.addEventListener('change', (e) => {
+    if(e.target.classList && e.target.classList.contains('quick-status-select')){
+      updateRecordStatus(e.target.getAttribute('data-id'), e.target.value);
+    }
+  });
+
+  function daysSince(ts){
+    if(!ts) return 0;
+    return Math.floor((Date.now() - ts) / 86400000);
+  }
+  function isOverdue(r, thresholdDays){
+    if(r.paidStatus === 'paid') return false;
+    return daysSince(r.savedAt) >= thresholdDays;
+  }
+  function getOverdueThreshold(){
+    const v = Number(el('overdueDays').value);
+    return (Number.isFinite(v) && v >= 0) ? v : 3;
+  }
+
+  function renderRecordsList(filterText){
+    const records = loadRecords();
+    const qText = (filterText || '').trim().toLowerCase();
+    const qDigits = normalizeDigits(filterText);
+    const filtered = !qText ? records : records.filter(r =>
+      String(r.invNumber||'').toLowerCase().includes(qText) ||
+      String(r.custName||'').toLowerCase().includes(qText) ||
+      String(r.custPhone||'').toLowerCase().includes(qText) ||
+      String(r.custAddress||'').toLowerCase().includes(qText) ||
+      (qDigits && (
+        normalizeDigits(r.invNumber).includes(qDigits) ||
+        normalizeDigits(r.custPhone).includes(qDigits) ||
+        normalizeDigits(r.custAddress).includes(qDigits) ||
+        normalizeDigits(r.total).includes(qDigits)
+      ))
+    );
+    const listEl = el('recordsList');
+    const emptyHint = el('recordsEmptyHint');
+    if(filtered.length === 0){
+      listEl.innerHTML = '';
+      emptyHint.style.display = 'block';
+      emptyHint.textContent = records.length === 0
+        ? 'هنوز فاکتوری ثبت نشده است. بعد از گرفتن خروجی PDF از یک فاکتور، اینجا ثبت می‌شود.'
+        : 'نتیجه‌ای برای این جستجو پیدا نشد.';
+      return;
+    }
+    emptyHint.style.display = 'none';
+    const threshold = getOverdueThreshold();
+    listEl.innerHTML = filtered.map(r => {
+      const s = statusInfo(r.paidStatus);
+      const overdue = isOverdue(r, threshold);
+      return `
+        <div class="record-card${overdue ? ' overdue' : ''}" data-id="${r.id}">
+          <div class="record-main">
+            <div class="record-title">فاکتور ${escapeHtml(r.invNumber || '—')} — ${escapeHtml(r.custName || 'بدون نام')}</div>
+            <div class="record-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
+          </div>
+          <div class="record-right">
+            <span class="record-amount">${formatMoney(r.total)} ریال</span>
+            ${overdue ? `<span class="overdue-badge">⚠️ ${toFa(daysSince(r.savedAt))} روز معوق</span>` : ''}
+            ${quickStatusSelectHtml(r)}
+            <button type="button" class="record-delete" data-del="${r.id}" title="حذف">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderOverdueList(){
+    storage.set('inv_overdue_days', el('overdueDays').value);
+    const threshold = getOverdueThreshold();
+    const records = loadRecords().filter(r => isOverdue(r, threshold));
+    records.sort((a, b) => (a.savedAt||0) - (b.savedAt||0));
+    const listEl = el('overdueList');
+    const emptyHint = el('overdueEmptyHint');
+    if(records.length === 0){
+      listEl.innerHTML = '';
+      emptyHint.style.display = 'block';
+      return;
+    }
+    emptyHint.style.display = 'none';
+    listEl.innerHTML = records.map(r => {
+      const s = statusInfo(r.paidStatus);
+      return `
+        <div class="record-card overdue" data-id="${r.id}">
+          <div class="record-main">
+            <div class="record-title">فاکتور ${escapeHtml(r.invNumber || '—')} — ${escapeHtml(r.custName || 'بدون نام')}</div>
+            <div class="record-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
+          </div>
+          <div class="record-right">
+            <span class="record-amount">${formatMoney(r.total)} ریال</span>
+            <span class="overdue-badge">⚠️ ${toFa(daysSince(r.savedAt))} روز معوق</span>
+            ${quickStatusSelectHtml(r)}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  el('overdueDays').addEventListener('input', () => { renderOverdueList(); renderRecordsList(el('recordSearch').value); });
+  el('overdueList').addEventListener('click', (e) => {
+    if(e.target.closest('.quick-status-select')) return;
+    const card = e.target.closest('.record-card');
+    if(card){
+      const id = card.getAttribute('data-id');
+      const record = loadRecords().find(r => r.id === id);
+      if(record) loadRecordIntoForm(record);
+    }
+  });
+
+  {
+    const savedDays = storage.get('inv_overdue_days');
+    if(savedDays !== null) el('overdueDays').value = savedDays;
+  }
+
+  {
+    const savedShowVat = storage.get('inv_show_vat_column');
+    if(savedShowVat !== null) el('showVatColumn').checked = savedShowVat === '1';
+  }
+  el('showVatColumn').addEventListener('change', () => {
+    storage.set('inv_show_vat_column', el('showVatColumn').checked ? '1' : '0');
+    renderPreview();
+  });
+
+  {
+    const savedShowUnit = storage.get('inv_show_unit_column');
+    if(savedShowUnit !== null) el('showUnitColumn').checked = savedShowUnit === '1';
+  }
+  el('showUnitColumn').addEventListener('change', () => {
+    storage.set('inv_show_unit_column', el('showUnitColumn').checked ? '1' : '0');
+    renderPreview();
+  });
+
+  // ---------- customer profile (lookup by name, phone, or address) ----------
+  function renderCustomerProfile(){
+    const raw = el('customerProfileSearch').value.trim();
+    const qDigits = normalizeDigits(raw);
+    const qText = raw.toLowerCase();
+    const wrap = el('customerProfileResult');
+    if(!raw){
+      wrap.innerHTML = '<div class="hint">نام، شماره تلفن یا آدرس مشتری را وارد کنید.</div>';
+      return;
+    }
+    const records = loadRecords().filter(r =>
+      (qDigits && (
+        normalizeDigits(r.custPhone).includes(qDigits) ||
+        normalizeDigits(r.custAddress).includes(qDigits)
+      )) ||
+      String(r.custName || '').toLowerCase().includes(qText) ||
+      String(r.custAddress || '').toLowerCase().includes(qText)
+    );
+    if(records.length === 0){
+      wrap.innerHTML = '<div class="hint">مشتری‌ای با این مشخصات پیدا نشد.</div>';
+      return;
+    }
+    const distinctPhones = Array.from(new Set(records.map(r => r.custPhone)));
+    if(distinctPhones.length > 1){
+      wrap.innerHTML = '<div class="hint">چند مشتری/شماره مختلف با این جست‌وجو مطابقت دارند؛ دقیق‌تر بنویسید یا از لیست زیر شماره را کامل کنید:</div>' +
+        '<div class="preset-manager-list" style="margin-top:8px;">' +
+        distinctPhones.map(p => {
+          const sample = records.find(r => r.custPhone === p);
+          return `<span class="preset-chip">${escapeHtml(sample.custName || 'بدون نام')} — ${escapeHtml(p || 'بدون شماره')}</span>`;
+        }).join('') +
+        '</div>';
+      return;
+    }
+
+    records.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    const latest = records[0];
+    const totalAll = records.reduce((s, r) => s + (Number(r.total) || 0), 0);
+    const totalPaid = records.filter(r => r.paidStatus === 'paid').reduce((s, r) => s + (Number(r.total) || 0), 0);
+    const totalUnpaid = records.filter(r => r.paidStatus === 'unpaid').reduce((s, r) => s + (Number(r.total) || 0), 0);
+    const totalPending = totalAll - totalPaid - totalUnpaid;
+    const fmtDate = ts => ts ? toJalaliInputValue(new Date(ts)) : '—';
+
+    wrap.innerHTML = `
+      <div class="cust-profile-card">
+        <div class="cust-profile-header">
+          <div>
+            <div class="cust-profile-name">${escapeHtml(latest.custName || 'بدون نام')}</div>
+            <div class="cust-profile-sub">${escapeHtml(latest.custPhone || '')}${latest.custAddress ? ' · ' + escapeHtml(latest.custAddress) : ''}</div>
+          </div>
+        </div>
+        <div class="report-grid" style="margin-top:14px;">
+          <div class="report-card"><div class="num">${toFa(records.length)}</div><div class="lbl">تعداد فاکتور</div></div>
+          <div class="report-card"><div class="num">${formatMoney(totalAll)}</div><div class="lbl">جمع کل خرید (ریال)</div></div>
+          <div class="report-card paid"><div class="num">${formatMoney(totalPaid)}</div><div class="lbl">جمع پرداخت‌شده</div></div>
+          <div class="report-card unpaid"><div class="num">${formatMoney(totalUnpaid)}</div><div class="lbl">جمع پرداخت‌نشده</div></div>
+          <div class="report-card pending"><div class="num">${formatMoney(totalPending)}</div><div class="lbl">جمع در انتظار</div></div>
+        </div>
+        <div class="cust-profile-dates">
+          <span>اولین خرید: ${fmtDate(records[records.length-1].savedAt)}</span>
+          <span>آخرین خرید: ${fmtDate(records[0].savedAt)}</span>
+        </div>
+        <div class="records-list" style="margin-top:14px;">
+          ${records.map(r => {
+            return `
+              <div class="record-card" data-id="${r.id}">
+                <div class="record-main">
+                  <div class="record-title">فاکتور ${escapeHtml(r.invNumber || '—')}</div>
+                  <div class="record-sub">${fmtDate(r.savedAt)}</div>
+                </div>
+                <div class="record-right">
+                  <span class="record-amount">${formatMoney(r.total)} ریال</span>
+                  ${quickStatusSelectHtml(r)}
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  el('customerProfileSearch').addEventListener('input', renderCustomerProfile);
+  el('customerProfileResult').addEventListener('click', (e) => {
+    if(e.target.closest('.quick-status-select')) return;
+    const card = e.target.closest('.record-card');
+    if(card){
+      const id = card.getAttribute('data-id');
+      const record = loadRecords().find(r => r.id === id);
+      if(record) loadRecordIntoForm(record);
+    }
+  });
+  renderCustomerProfile();
+
+
+
+  function dateInputToRange(fromVal, toVal){
+    const fromTs = fromVal ? (jalaliStrToTimestamp(fromVal, false) ?? -Infinity) : -Infinity;
+    const toTs = toVal ? (jalaliStrToTimestamp(toVal, true) ?? Infinity) : Infinity;
+    return { fromTs, toTs };
+  }
+
+  function computeReport(fromTs, toTs){
+    const records = loadRecords().filter(r => {
+      const t = r.savedAt || 0;
+      return t >= fromTs && t <= toTs;
+    });
+    const sums = {
+      count: records.length, all: 0, paid: 0, unpaid: 0, pending: 0,
+      countPaid: 0, countUnpaid: 0, countPending: 0,
+    };
+    records.forEach(r => {
+      const amt = Number(r.total) || 0;
+      sums.all += amt;
+      if(r.paidStatus === 'paid'){ sums.paid += amt; sums.countPaid++; }
+      else if(r.paidStatus === 'unpaid'){ sums.unpaid += amt; sums.countUnpaid++; }
+      else { sums.pending += amt; sums.countPending++; }
+    });
+    return sums;
+  }
+
+  function renderReport(){
+    const fromVal = el('reportFrom').value;
+    const toVal = el('reportTo').value;
+    const { fromTs, toTs } = dateInputToRange(fromVal, toVal);
+    const s = computeReport(fromTs, toTs);
+    el('reportGrid').innerHTML = `
+      <div class="report-card"><div class="num">${toFa(s.count)}</div><div class="lbl">تعداد فاکتور</div></div>
+      <div class="report-card"><div class="num">${formatMoney(s.all)}</div><div class="lbl">جمع کل (ریال)</div></div>
+      <div class="report-card paid"><div class="num">${formatMoney(s.paid)}</div><div class="lbl">جمع پرداخت‌شده (ریال)</div><div class="count">${toFa(s.countPaid)} فاکتور</div></div>
+      <div class="report-card unpaid"><div class="num">${formatMoney(s.unpaid)}</div><div class="lbl">جمع پرداخت‌نشده (ریال)</div><div class="count">${toFa(s.countUnpaid)} فاکتور</div></div>
+      <div class="report-card pending"><div class="num">${formatMoney(s.pending)}</div><div class="lbl">جمع در انتظار (ریال)</div><div class="count">${toFa(s.countPending)} فاکتور</div></div>
+    `;
+  }
+
+  document.querySelectorAll('.report-filter-row [data-range]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.report-filter-row [data-range]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const today = new Date();
+      const range = btn.getAttribute('data-range');
+      if(range === 'today'){
+        el('reportFrom').value = toJalaliInputValue(today);
+        el('reportTo').value = toJalaliInputValue(today);
+      } else if(range === 'week'){
+        const from = new Date(today); from.setDate(from.getDate() - 6);
+        el('reportFrom').value = toJalaliInputValue(from);
+        el('reportTo').value = toJalaliInputValue(today);
+      } else if(range === 'month'){
+        const from = new Date(today); from.setDate(from.getDate() - 29);
+        el('reportFrom').value = toJalaliInputValue(from);
+        el('reportTo').value = toJalaliInputValue(today);
+      } else if(range === 'all'){
+        el('reportFrom').value = '';
+        el('reportTo').value = '';
+      }
+      renderReport();
+    renderOverdueList();
+    });
+  });
+  function updateReportAfterDateChange(){
+    document.querySelectorAll('.report-filter-row [data-range]').forEach(b => b.classList.remove('active'));
+    renderReport();
+    renderOverdueList();
+  }
+  ['input', 'change'].forEach(evt => {
+    el('reportFrom').addEventListener(evt, updateReportAfterDateChange);
+    el('reportTo').addEventListener(evt, updateReportAfterDateChange);
+  });
+  wireDateStepper('reportFrom', 'reportFromUpBtn', 'reportFromDownBtn', updateReportAfterDateChange);
+  wireDateStepper('reportTo', 'reportToUpBtn', 'reportToDownBtn', updateReportAfterDateChange);
+
+  el('recordSearch').addEventListener('input', () => renderRecordsList(el('recordSearch').value));
+
+  el('recordsList').addEventListener('click', (e) => {
+    if(e.target.closest('.quick-status-select')) return;
+    const delBtn = e.target.closest('[data-del]');
+    if(delBtn){
+      e.stopPropagation();
+      const id = delBtn.getAttribute('data-del');
+      const record = loadRecords().find(r => r.id === id);
+      if(!record) return;
+      if(!confirm('این فاکتور به سطل زباله منتقل شود؟ تا ۷ روز قابل بازگردانی است.')) return;
+      moveRecordToTrash(id);
+      if(editingRecordId === id){
+        editingRecordId = null;
+        el('editingBanner').style.display = 'none';
+      }
+      renderRecordsList(el('recordSearch').value);
+      renderReport();
+    renderOverdueList();
+      renderCustomerProfile();
+      renderTrashList();
+      return;
+    }
+    const card = e.target.closest('.record-card');
+    if(card){
+      const id = card.getAttribute('data-id');
+      const record = loadRecords().find(r => r.id === id);
+      if(record) loadRecordIntoForm(record);
+    }
+  });
+
+  function loadRecordIntoForm(record){
+    editingRecordId = record.id;
+    el('invNumber').value = record.invNumber || '';
+    el('invDate').value = record.invDate || '';
+    el('paidStatus').value = record.paidStatus || '';
+    el('custName').value = record.custName || '';
+    el('custPhone').value = record.custPhone || '';
+    el('custAddress').value = record.custAddress || '';
+    el('custEconomicId').value = record.custEconomicId || '';
+    el('custNationalId').value = record.custNationalId || '';
+    el('custPostalCode').value = record.custPostalCode || '';
+    el('alwaysShowCustIds').checked = !!record.alwaysShowCustIds;
+    el('discount').value = record.discount ? groupThousands(String(record.discount)) : '';
+    el('taxPercent').value = record.taxPercent || '';
+    el('note').value = record.note || '';
+    el('itemsWrap').innerHTML = '';
+    const items = (record.items && record.items.length) ? record.items : [{}];
+    items.forEach(it => addItemRow(it.description || '', it.qty || 1, it.unitPrice || '', it.detail || '', it.useCustomTax || false, it.customTaxPercent, it.unit));
+    el('editingBanner').style.display = 'flex';
+    renderPreview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  el('cancelEditBtn').addEventListener('click', () => {
+    editingRecordId = null;
+    el('editingBanner').style.display = 'none';
+  });
+
+  // ---------- backup / restore (export & import all data as a JSON file) ----------
+  function getAllInvKeys(){
+    const keys = [];
+    try{
+      for(let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if(k && k.startsWith('inv_')) keys.push(k);
+      }
+    }catch(e){ /* localStorage در دسترس نیست */ }
+    return keys;
+  }
+
+  el('downloadBackupBtn').addEventListener('click', () => {
+    const data = {};
+    getAllInvKeys().forEach(k => { data[k] = storage.get(k); });
+    const payload = {
+      app: 'invoice-generator-ac',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `فاکتورساز-پشتیبان-${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('فایل پشتیبان دانلود شد');
+  });
+
+  el('restoreBackupBtn').addEventListener('click', () => el('restoreFileInput').click());
+
+  el('restoreFileInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result);
+        const data = (parsed && typeof parsed.data === 'object') ? parsed.data : parsed;
+        if(!data || typeof data !== 'object') throw new Error('ساختار فایل شناخته‌شده نیست');
+        const keys = Object.keys(data).filter(k => k.startsWith('inv_'));
+        if(keys.length === 0) throw new Error('هیچ داده‌ی قابل‌بازیابی در این فایل پیدا نشد');
+        if(!confirm(`این فایل شامل ${keys.length} مورد داده است. بازیابی، اطلاعات فعلی این مرورگر (فاکتورها و تنظیمات) را جایگزین می‌کند. ادامه می‌دهید؟`)){
+          e.target.value = '';
+          return;
+        }
+        keys.forEach(k => storage.set(k, data[k]));
+        showToast('بازیابی انجام شد؛ صفحه در حال بارگذاری مجدد...');
+        setTimeout(() => location.reload(), 1000);
+      }catch(err){
+        alert('این فایل قابل بازیابی نیست: ' + err.message);
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  el('trashList').addEventListener('click', (e) => {
+    const restoreBtn = e.target.closest('[data-restore]');
+    if(restoreBtn){
+      const id = restoreBtn.getAttribute('data-restore');
+      restoreFromTrash(id);
+      renderTrashList();
+      renderRecordsList(el('recordSearch').value);
+      renderReport();
+      renderOverdueList();
+      renderCustomerProfile();
+      showToast('فاکتور بازگردانده شد');
+      return;
+    }
+    const permBtn = e.target.closest('[data-perm-del]');
+    if(permBtn){
+      const id = permBtn.getAttribute('data-perm-del');
+      if(!confirm('این فاکتور برای همیشه حذف شود؟ این کار قابل بازگشت نیست.')) return;
+      permanentlyDeleteFromTrash(id);
+      renderTrashList();
+      return;
+    }
+  });
+
+  renderRecordsList('');
+  renderReport();
+    renderOverdueList();
+  renderTrashList();
+
+  renderPreview();
+})();
+</script>
+</body>
+</html>
