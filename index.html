@@ -84,6 +84,13 @@
   .field textarea{ resize:vertical; min-height:60px; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
+  @media (max-width: 560px){
+    /* iOS Safari auto-zooms into any focused input under 16px; keeping all form fields at
+       16px on small screens prevents that jarring zoom and keeps typed text fully visible. */
+    .field input[type=text], .field input[type=number], .field input[type=tel],
+    .field textarea, .field select, #paidStatus{ font-size:16px !important; }
+  }
+
   .date-field-wrap{ display:flex; gap:6px; align-items:stretch; }
   .date-field-wrap input{ flex:1; min-width:0; }
   .date-step-btns{ display:flex; flex-direction:column; gap:2px; }
@@ -143,6 +150,25 @@
   .item-tax-toggle{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); cursor:pointer; white-space:nowrap; }
   .item-tax-toggle input{ width:14px; height:14px; margin:0; }
   .item-row .it-tax-percent{ max-width:170px; font-size:12.5px; }
+
+  @media (max-width: 560px){
+    .item-row-main{
+      grid-template-columns: 1fr 1fr auto;
+      grid-template-areas:
+        "desc desc desc"
+        "qty unit unit"
+        "price price remove";
+      row-gap:8px;
+    }
+    .item-row-main .it-desc{ grid-area: desc; }
+    .item-row-main .it-qty{ grid-area: qty; }
+    .item-row-main .it-unit{ grid-area: unit; }
+    .item-row-main .it-price{ grid-area: price; }
+    .item-row-main .remove-btn{ grid-area: remove; justify-self:end; }
+    .item-row input{ font-size:16px; padding:10px 11px; }
+    .item-row .it-detail{ font-size:14px; }
+    .item-row .it-tax-percent{ font-size:14px; max-width:none; flex:1; }
+  }
 
   .sticky-actions{
     position:sticky; bottom:0;
