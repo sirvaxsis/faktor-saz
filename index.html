@@ -411,6 +411,7 @@
             <div class="field">
               <label for="invNumber">شماره فاکتور</label>
               <input type="text" id="invNumber" inputmode="numeric">
+              <div class="hint" id="invNumberHint" style="margin-top:2px;"></div>
             </div>
             <div class="field">
               <label for="invDate">تاریخ</label>
@@ -1291,6 +1292,7 @@
     el('itemsWrap').innerHTML = '';
     addItemRow('', 1, '');
     renderPreview();
+    renderInvNumberHint();
   });
 
   // ---------- Invoice records (saved invoices list) ----------
@@ -1301,6 +1303,34 @@
     catch(e){ return []; }
   }
   function saveRecordsArr(arr){ storage.set('inv_records', JSON.stringify(arr)); }
+
+  // ---------- invoice number: show last-used number & warn on duplicates ----------
+  function getLastUsedInvoiceNumber(){
+    const nums = loadRecords()
+      .map(r => parseInt(normalizeDigits(r.invNumber), 10))
+      .filter(n => !isNaN(n));
+    return nums.length ? Math.max(...nums) : null;
+  }
+  function renderInvNumberHint(){
+    const hintEl = el('invNumberHint');
+    if(!hintEl) return;
+    const currentDigits = normalizeDigits(el('invNumber').value);
+    if(currentDigits){
+      const dup = loadRecords().find(r =>
+        r.id !== editingRecordId && normalizeDigits(r.invNumber) === currentDigits
+      );
+      if(dup){
+        hintEl.textContent = `⚠️ این شماره قبلاً برای فاکتور «${dup.custName || 'بدون نام'}» استفاده شده`;
+        hintEl.style.color = 'var(--warn)';
+        return;
+      }
+    }
+    hintEl.style.color = '';
+    const last = getLastUsedInvoiceNumber();
+    hintEl.textContent = last !== null ? `آخرین شماره فاکتور ثبت‌شده: ${toFa(last)}` : '';
+  }
+  el('invNumber').addEventListener('input', renderInvNumberHint);
+  renderInvNumberHint();
 
   // ---------- trash bin (soft-delete, recoverable for 7 days) ----------
   const TRASH_DAYS = 7;
@@ -1406,6 +1436,7 @@
     renderReport();
     renderOverdueList();
     renderCustomerProfile();
+    renderInvNumberHint();
   }
 
   function statusInfo(paidStatus){
@@ -1761,6 +1792,7 @@
     renderOverdueList();
       renderCustomerProfile();
       renderTrashList();
+      renderInvNumberHint();
       return;
     }
     const card = e.target.closest('.record-card');
@@ -1791,12 +1823,14 @@
     items.forEach(it => addItemRow(it.description || '', it.qty || 1, it.unitPrice || '', it.detail || '', it.useCustomTax || false, it.customTaxPercent, it.unit));
     el('editingBanner').style.display = 'flex';
     renderPreview();
+    renderInvNumberHint();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   el('cancelEditBtn').addEventListener('click', () => {
     editingRecordId = null;
     el('editingBanner').style.display = 'none';
+    renderInvNumberHint();
   });
 
   // ---------- backup / restore (export & import all data as a JSON file) ----------
@@ -1873,6 +1907,7 @@
       renderOverdueList();
       renderCustomerProfile();
       showToast('فاکتور بازگردانده شد');
+      renderInvNumberHint();
       return;
     }
     const permBtn = e.target.closest('[data-perm-del]');
