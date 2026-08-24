@@ -129,6 +129,19 @@
   .btn.danger{ color:var(--warn); border-color:var(--warn); background:#fff; }
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
 
+  .status-btn-group{ display:flex; gap:8px; flex-wrap:wrap; }
+  .status-btn{
+    font-family:inherit; flex:1; min-width:100px;
+    border:1px solid var(--line); background:#fff; color:var(--muted);
+    border-radius:8px; padding:9px 8px; font-size:12.5px; font-weight:600;
+    cursor:pointer; text-align:center; white-space:nowrap;
+  }
+  .status-btn:hover{ border-color:var(--ink); }
+  .status-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  @media (max-width: 480px){
+    .status-btn{ min-width:0; padding:9px 4px; font-size:11px; }
+  }
+
   .items-wrap{ display:flex; flex-direction:column; gap:14px; }
   .item-row{ display:flex; flex-direction:column; gap:6px; padding-bottom:10px; border-bottom:1px dashed var(--line); }
   .item-row:last-child{ border-bottom:none; padding-bottom:0; }
@@ -330,7 +343,12 @@
     .layout{ display:block; padding:0; max-width:none; }
     .preview-col{ display:block; }
     .sheet-shadow{ box-shadow:none; max-width:none; width:100%; border-radius:0; overflow:visible; }
-    #invoiceSheet{ padding:6mm; }
+    #invoiceSheet{
+      padding:6mm;
+      /* اگر محتوا زیاد باشد، اسکریپت مقدار --print-scale را کمتر از ۱ تنظیم می‌کند
+         تا کل فاکتور در یک برگه A4 جا شود (به‌جای سرریز به برگه دوم). */
+      zoom: var(--print-scale, 1);
+    }
     @page{ size:A4; margin:10mm; }
   }
 </style>
@@ -425,8 +443,13 @@
             </div>
           </div>
           <div class="field">
-            <label for="paidStatus">وضعیت پرداخت</label>
-            <select id="paidStatus" style="font-family:inherit; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:13.5px;">
+            <label>وضعیت پرداخت</label>
+            <div class="status-btn-group" id="paidStatusBtns">
+              <button type="button" class="status-btn active" data-status="">🕓 در انتظار</button>
+              <button type="button" class="status-btn" data-status="unpaid">⏳ پرداخت‌نشده</button>
+              <button type="button" class="status-btn" data-status="paid">✅ پرداخت‌شده</button>
+            </div>
+            <select id="paidStatus" style="display:none;">
               <option value="" selected>در انتظار (چیزی روی فاکتور نمایش داده نمی‌شود)</option>
               <option value="unpaid">پرداخت‌نشده</option>
               <option value="paid">پرداخت‌شده</option>
@@ -485,6 +508,10 @@
             <input type="checkbox" id="showVatColumn" checked style="width:15px; height:15px; margin:0;">
             نمایش ستون «ارزش افزوده» در جدول اقلام فاکتور
           </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer;">
+            <input type="checkbox" id="showRowTotalColumn" style="width:15px; height:15px; margin:0;">
+            نمایش ستون «جمع کل ردیف» (مبلغ نهایی همان ردیف با احتساب مالیاتش) در جدول اقلام فاکتور
+          </label>
           <div class="items-wrap" id="itemsWrap"></div>
           <button type="button" class="btn outline sm" id="addItemBtn" style="align-self:flex-start;">+ افزودن ردیف</button>
         </div>
@@ -536,8 +563,13 @@
             </div>
           </div>
           <div class="field">
-            <label for="note">توضیحات (اختیاری)</label>
+            <label for="note">توضیحات (اختیاری، روی خود فاکتور چاپ می‌شود)</label>
             <textarea id="note" placeholder="مثلاً: گارانتی سه ماهه روی قطعات تعویض‌شده"></textarea>
+          </div>
+          <div class="field">
+            <label for="internalNote">📝 یادداشت داخلی کارشناس (اختیاری)</label>
+            <textarea id="internalNote" placeholder="مثلاً: مشتری بدقلقه، دفعه بعد قبل رفتن زنگ بزن / قطعه یدکی نیاز بود ولی نبود..."></textarea>
+            <div class="hint">این یادداشت فقط برای خودتان ذخیره می‌شود، روی فاکتور چاپی/PDF نشان داده نمی‌شود و مشتری آن را نمی‌بیند.</div>
           </div>
         </div>
       </div>
@@ -1154,12 +1186,14 @@
 
     const showVat = el('showVatColumn').checked;
     const showUnit = el('showUnitColumn').checked;
+    const showRowTotal = el('showRowTotalColumn').checked;
     const rows = t.items.map((it, idx) => {
       const lineTotal = it.qty * it.unitPrice;
       const rowRate = it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : t.taxPercent;
       const lineVat = Math.round(lineTotal * rowRate / 100);
       const vatLabel = it.useCustomTax ? `${formatMoney(lineVat)}<div class="item-detail-line">(٪${toFa(rowRate)} جداگانه)</div>` : formatMoney(lineVat);
       const unitLabel = it.unit ? escapeHtml(it.unit) : '—';
+      const rowGrandTotal = lineTotal + lineVat;
       return `
       <tr>
         <td class="c-center">${toFa(idx+1)}</td>
@@ -1169,8 +1203,9 @@
         <td class="c-left">${formatMoney(it.unitPrice)}</td>
         <td class="c-left">${formatMoney(lineTotal)}</td>
         ${showVat ? `<td class="c-left">${vatLabel}</td>` : ''}
+        ${showRowTotal ? `<td class="c-left">${formatMoney(rowGrandTotal)}</td>` : ''}
       </tr>`;
-    }).join('') || `<tr class="empty-row"><td colspan="${5 + (showUnit?1:0) + (showVat?1:0)}">هنوز ردیفی اضافه نشده است</td></tr>`;
+    }).join('') || `<tr class="empty-row"><td colspan="${5 + (showUnit?1:0) + (showVat?1:0) + (showRowTotal?1:0)}">هنوز ردیفی اضافه نشده است</td></tr>`;
 
     const companyName = escapeHtml(el('companyName').value || 'نام شرکت شما');
     const companyAddress = escapeHtml(el('companyAddress').value || '—');
@@ -1234,6 +1269,7 @@
             <th style="width:105px;">مبلغ واحد (ریال)</th>
             <th style="width:110px;">قیمت کل (ریال)</th>
             ${showVat ? '<th style="width:110px;">ارزش افزوده (ریال)</th>' : ''}
+            ${showRowTotal ? '<th style="width:110px;">جمع کل ردیف (ریال)</th>' : ''}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -1264,9 +1300,49 @@
     `;
   }
 
+  // ---------- fit invoice onto a single A4 page ----------
+  // اگر تعداد ردیف‌های فاکتور زیاد شود، ارتفاع محتوا از یک برگه A4 بیشتر می‌شود و باعث می‌شود
+  // خروجی PDF دو صفحه‌ای شود. این تابع ارتفاع واقعی محتوا را (با همان اندازه‌ای که هنگام چاپ
+  // رندر می‌شود) اندازه می‌گیرد و در صورت لزوم یک ضریب کوچک‌نمایی محاسبه می‌کند تا کل فاکتور
+  // در یک صفحه جا شود. این ضریب با متغیر CSS ‎--print-scale‎ روی خود #invoiceSheet اعمال می‌شود
+  // (فقط در حالت چاپ، طبق قاعده @media print بالا).
+  function computePrintFitScale(){
+    const MM_TO_PX = 3.7795275591;
+    const PAGE_MARGIN_MM = 10;   // با @page margin هماهنگ است
+    const SHEET_PADDING_MM = 6;  // با پدینگ #invoiceSheet در حالت چاپ هماهنگ است
+    const availableHeightPx = (297 - 2*PAGE_MARGIN_MM - 2*SHEET_PADDING_MM) * MM_TO_PX;
+    const contentWidthPx = (210 - 2*PAGE_MARGIN_MM - 2*SHEET_PADDING_MM) * MM_TO_PX;
+
+    const original = el('invoiceSheet');
+    const clone = original.cloneNode(true);
+    clone.removeAttribute('id');
+    clone.style.position = 'absolute';
+    clone.style.visibility = 'hidden';
+    clone.style.pointerEvents = 'none';
+    clone.style.left = '-99999px';
+    clone.style.top = '0';
+    clone.style.padding = '0';
+    clone.style.border = 'none';
+    clone.style.width = contentWidthPx + 'px';
+    clone.style.minHeight = '0';
+    document.body.appendChild(clone);
+    const measuredHeight = clone.scrollHeight;
+    document.body.removeChild(clone);
+
+    if(measuredHeight <= availableHeightPx) return 1;
+    // کمی حاشیه اطمینان (۲٪) تا گرد شدن اعداد باعث سرریز به صفحه دوم نشود
+    const scale = (availableHeightPx / measuredHeight) * 0.98;
+    return Math.max(0.4, scale);
+  }
+  function applyPrintFitScale(){
+    const scale = computePrintFitScale();
+    el('invoiceSheet').style.setProperty('--print-scale', scale);
+  }
+
   // ---------- print / PDF ----------
   el('printBtn').addEventListener('click', () => {
     saveCurrentAsRecord();
+    applyPrintFitScale();
     window.print();
   });
 
@@ -1288,7 +1364,9 @@
     el('discount').value = '';
     el('taxPercent').value = '';
     el('note').value = '';
+    el('internalNote').value = '';
     el('paidStatus').value = '';
+    syncPaidStatusButtons();
     el('itemsWrap').innerHTML = '';
     addItemRow('', 1, '');
     renderPreview();
@@ -1331,6 +1409,22 @@
   }
   el('invNumber').addEventListener('input', renderInvNumberHint);
   renderInvNumberHint();
+
+  // ---------- payment status quick-tap buttons (mirrors the hidden #paidStatus select) ----------
+  function syncPaidStatusButtons(){
+    const val = el('paidStatus').value;
+    document.querySelectorAll('#paidStatusBtns .status-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-status') === val);
+    });
+  }
+  document.querySelectorAll('#paidStatusBtns .status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el('paidStatus').value = btn.getAttribute('data-status');
+      syncPaidStatusButtons();
+      el('paidStatus').dispatchEvent(new Event('input', { bubbles: true }));
+      el('paidStatus').dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
 
   // ---------- trash bin (soft-delete, recoverable for 7 days) ----------
   const TRASH_DAYS = 7;
@@ -1416,6 +1510,7 @@
       discount: normalizeDigits(el('discount').value),
       taxPercent: el('taxPercent').value.trim(),
       note: el('note').value.trim(),
+      internalNote: el('internalNote').value.trim(),
     };
   }
 
@@ -1463,7 +1558,7 @@
     records[idx].paidStatus = newStatus;
     if(newStatus === 'paid') records[idx].paidAt = Date.now();
     saveRecordsArr(records);
-    if(editingRecordId === id) el('paidStatus').value = newStatus;
+    if(editingRecordId === id){ el('paidStatus').value = newStatus; syncPaidStatusButtons(); }
     renderRecordsList(el('recordSearch').value);
     renderReport();
     renderOverdueList();
@@ -1598,6 +1693,15 @@
   }
   el('showUnitColumn').addEventListener('change', () => {
     storage.set('inv_show_unit_column', el('showUnitColumn').checked ? '1' : '0');
+    renderPreview();
+  });
+
+  {
+    const savedShowRowTotal = storage.get('inv_show_row_total_column');
+    if(savedShowRowTotal !== null) el('showRowTotalColumn').checked = savedShowRowTotal === '1';
+  }
+  el('showRowTotalColumn').addEventListener('change', () => {
+    storage.set('inv_show_row_total_column', el('showRowTotalColumn').checked ? '1' : '0');
     renderPreview();
   });
 
@@ -1808,6 +1912,7 @@
     el('invNumber').value = record.invNumber || '';
     el('invDate').value = record.invDate || '';
     el('paidStatus').value = record.paidStatus || '';
+    syncPaidStatusButtons();
     el('custName').value = record.custName || '';
     el('custPhone').value = record.custPhone || '';
     el('custAddress').value = record.custAddress || '';
@@ -1818,6 +1923,7 @@
     el('discount').value = record.discount ? groupThousands(String(record.discount)) : '';
     el('taxPercent').value = record.taxPercent || '';
     el('note').value = record.note || '';
+    el('internalNote').value = record.internalNote || '';
     el('itemsWrap').innerHTML = '';
     const items = (record.items && record.items.length) ? record.items : [{}];
     items.forEach(it => addItemRow(it.description || '', it.qty || 1, it.unitPrice || '', it.detail || '', it.useCustomTax || false, it.customTaxPercent, it.unit));
