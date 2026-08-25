@@ -289,6 +289,40 @@
   .record-card.overdue{ border-color:#e0a0a0; background:#fff8f7; }
   .record-card.overdue:hover{ background:#fdeeed; }
   .overdue-badge{ font-size:10px; font-weight:700; color:var(--warn); background:#fdecea; padding:3px 9px; border-radius:100px; white-space:nowrap; }
+  .reminder-badge{ font-size:10px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; }
+  .reminder-badge.overdue{ color:var(--warn); background:#fdecea; }
+  .reminder-badge.soon{ color:#8a5a10; background:#fdf1e0; }
+  .reminder-badge.later{ color:#3a5a78; background:#eef2f6; }
+  .record-category-badge{ font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:100px; background:#f0eaf7; color:#6a3fa0; white-space:nowrap; }
+
+  /* ---------- dropdown / popover multi-select (used for invoice categories) ---------- */
+  .dropdown-select{ position:relative; }
+  .dropdown-select-trigger{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-family:inherit; border:1px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:8px; padding:9px 11px; font-size:13.5px; cursor:pointer; text-align:right;
+  }
+  .dropdown-select-trigger:hover{ border-color:var(--ink); }
+  .dropdown-select-trigger .dropdown-arrow{ font-size:11px; color:var(--muted); transition:transform .15s ease; flex-shrink:0; }
+  .dropdown-select.open .dropdown-select-trigger{ border-color:var(--ink); }
+  .dropdown-select.open .dropdown-arrow{ transform:rotate(180deg); }
+  .dropdown-select-panel{
+    display:none; position:absolute; top:calc(100% + 6px); right:0; left:0; z-index:30;
+    background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(0,0,0,.14);
+    padding:6px; max-height:240px; overflow-y:auto;
+  }
+  .dropdown-select.open .dropdown-select-panel{ display:block; }
+  .dropdown-select-option{
+    display:flex; align-items:center; gap:8px; padding:8px 8px; border-radius:6px; cursor:pointer; font-size:13px;
+  }
+  .dropdown-select-option:hover{ background:#f2f2f2; }
+  .dropdown-select-option input{ width:15px; height:15px; margin:0; flex-shrink:0; }
+  .dropdown-select-empty{ font-size:12px; color:var(--muted); padding:8px; }
+  .dropdown-select-clear{
+    display:block; width:100%; text-align:center; background:none; border:none; border-top:1px solid var(--line-soft);
+    color:var(--muted); font-family:inherit; font-size:12px; padding:8px 4px 4px; cursor:pointer; margin-top:4px;
+  }
+  .dropdown-select-clear:hover{ color:var(--warn); }
 
   /* ---------- Customer profile ---------- */
   .cust-profile-card{ border:1px solid var(--line); border-radius:8px; padding:16px; }
@@ -455,6 +489,35 @@
               <option value="paid">پرداخت‌شده</option>
             </select>
           </div>
+          <div class="field">
+            <label>دسته‌بندی فاکتور (اختیاری، چندتایی هم می‌شود انتخاب کرد)</label>
+            <div class="dropdown-select" id="categoryDropdown">
+              <button type="button" class="dropdown-select-trigger" id="categoryDropdownTrigger">
+                <span id="categoryDropdownLabel">بدون دسته‌بندی</span>
+                <span class="dropdown-arrow">▾</span>
+              </button>
+              <div class="dropdown-select-panel" id="categoryDropdownPanel"></div>
+            </div>
+            <input type="hidden" id="invoiceCategory" value="">
+            <div class="hint">روی کادر بزنید تا لیست باز شود و می‌توانید چند دسته را با هم تیک بزنید (مثلاً هم «نصب» هم «تعمیر فوری»). فقط برای دسته‌بندی داخلی و فیلتر کردن بعدی فاکتورهاست، روی خود فاکتور چاپ نمی‌شود. دسته‌بندی‌ها را از بخش «🏷️ مدیریت دسته‌بندی‌های فاکتور» می‌توانید ویرایش کنید.</div>
+          </div>
+          <div class="field" id="serviceReminderField">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--ink); font-size:13px; font-weight:600;">
+              <input type="checkbox" id="serviceReminderEnabled" style="width:15px; height:15px; margin:0;">
+              🔔 یادآوری سرویس دوره‌ای برای این مشتری
+            </label>
+            <div class="row2" id="serviceReminderMonthsRow" style="display:none;">
+              <div class="field">
+                <label for="serviceReminderMonths">هر چند ماه یک‌بار</label>
+                <input type="text" id="serviceReminderMonths" inputmode="numeric" placeholder="مثلاً 6">
+              </div>
+              <div class="field">
+                <label>سررسید سرویس بعدی</label>
+                <div class="hint" id="nextServiceDatePreview" style="margin-top:9px; font-weight:600; color:var(--ink);">—</div>
+              </div>
+            </div>
+            <div class="hint">این یادآوری فقط داخل همین ابزار دیده می‌شود (پایین صفحه، بخش «یادآوری‌های سرویس دوره‌ای»)؛ روی فاکتور چاپی نمایش داده نمی‌شود.</div>
+          </div>
         </div>
       </div>
 
@@ -530,6 +593,22 @@
           <button type="button" class="btn outline sm" id="addPresetBtn" style="align-self:flex-start;">💾 ذخیره</button>
           <div id="presetManagerList" class="preset-manager-list"></div>
           <button type="button" class="btn ghost sm" id="resetPresetsBtn" style="align-self:flex-start;">بازگردانی به لیست پیش‌فرض</button>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="panelCategories">
+        <h2 onclick="togglePanel('panelCategories')">🏷️ مدیریت دسته‌بندی‌های فاکتور <span class="arrow">▾</span></h2>
+        <div class="panel-body">
+          <div class="hint">این‌ها همون گزینه‌هایی هستند که برای «دسته‌بندی فاکتور» (مثلاً نصب، سرویس دوره‌ای، تعمیر فوری) نشان داده می‌شوند و بعداً می‌توانید در لیست «فاکتورهای ثبت‌شده» بر اساسشان فیلتر کنید. مورد جدید بنویسید و «ذخیره» را بزنید. کنار هر مورد، ✕ حذف موقت (قابل بازگشت) و 🗑 حذف همیشگی است.</div>
+          <div class="row2" style="align-items:end;">
+            <div class="field" style="grid-column:1/-1;">
+              <label for="newCategoryInput">افزودن دسته‌بندی جدید</label>
+              <input type="text" id="newCategoryInput" placeholder="مثلاً: نصب کولر تجاری">
+            </div>
+          </div>
+          <button type="button" class="btn outline sm" id="addCategoryBtn" style="align-self:flex-start;">💾 ذخیره</button>
+          <div id="categoryManagerList" class="preset-manager-list"></div>
+          <button type="button" class="btn ghost sm" id="resetCategoriesBtn" style="align-self:flex-start;">بازگردانی به لیست پیش‌فرض</button>
         </div>
       </div>
 
@@ -649,6 +728,23 @@
   </div>
 
   <div class="records-wrap">
+    <div class="panel" id="panelServiceReminders">
+      <h2 onclick="togglePanel('panelServiceReminders')">🔔 یادآوری‌های سرویس دوره‌ای <span class="arrow">▾</span></h2>
+      <div class="panel-body">
+        <div class="row2" style="align-items:end;">
+          <div class="field">
+            <label for="reminderLeadDays">چند روز قبل از موعد، هشدار «به‌زودی» نشان بده</label>
+            <input type="text" id="reminderLeadDays" inputmode="numeric" value="7">
+          </div>
+        </div>
+        <div class="hint">این لیست فقط فاکتورهایی را نشان می‌دهد که برایشان «یادآوری سرویس دوره‌ای» را روشن کرده باشید (در بخش «اطلاعات فاکتور»، هنگام ساخت یا ویرایش فاکتور). با دکمهٔ «🔁 تمدید یک دوره»، بعد از تماس یا انجام سرویس بعدی، موعد را دوباره جلو می‌بَرید — بدون نیاز به ساخت فاکتور جدید.</div>
+        <div id="serviceRemindersList" class="records-list"></div>
+        <div class="hint" id="serviceRemindersEmptyHint">فعلاً یادآوری فعالی وجود ندارد.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="records-wrap">
     <div class="panel" id="panelCustomerProfile">
       <h2 onclick="togglePanel('panelCustomerProfile')">👤 پروفایل مشتری <span class="arrow">▾</span></h2>
       <div class="panel-body">
@@ -666,6 +762,10 @@
     <div class="panel" id="panelRecords">
       <h2 onclick="togglePanel('panelRecords')">📚 فاکتورهای ثبت‌شده <span class="arrow">▾</span></h2>
       <div class="panel-body">
+        <div class="field">
+          <label>فیلتر بر اساس دسته‌بندی</label>
+          <div class="report-filter-row" id="categoryFilterBtns"></div>
+        </div>
         <div class="field">
           <label for="recordSearch">جستجو بر اساس شماره فاکتور، نام، تلفن، آدرس یا مبلغ</label>
           <input type="text" id="recordSearch" placeholder="مثلاً: 1002 یا احمدی یا 0912... یا 5000000">
@@ -823,6 +923,30 @@
     return toFa(`${jy}/${pad(jm)}/${pad(jd)}`);
   }
 
+  // ---------- service reminder date math (add N months to a Jalali date) ----------
+  function jalaliMonthLength(jy, jm){
+    if(jm <= 6) return 31;
+    if(jm <= 11) return 30;
+    // اسفند: بسته به کبیسه بودن سال، ۲۹ یا ۳۰ روزه است؛ با رفت‌وبرگشت به میلادی تشخیص می‌دهیم
+    const g = jalaliToGregorian(jy, 12, 30);
+    const back = toJalali(g[0], g[1], g[2]);
+    return (back[1] === 12 && back[2] === 30) ? 30 : 29;
+  }
+  function computeNextServiceFromDateStr(dateStr, months){
+    const parsed = parseJalaliDateStr(dateStr);
+    if(!parsed || !months || months <= 0) return null;
+    const [jy, jm, jd] = parsed;
+    const totalMonths = (jy * 12 + (jm - 1)) + months;
+    const newJy = Math.floor(totalMonths / 12);
+    const newJm = (totalMonths % 12) + 1;
+    const newJd = Math.min(jd, jalaliMonthLength(newJy, newJm));
+    const [gy, gm, gd] = jalaliToGregorian(newJy, newJm, newJd);
+    const ts = new Date(gy, gm - 1, gd, 0, 0, 0, 0).getTime();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateStrOut = toFa(`${newJy}/${pad(newJm)}/${pad(newJd)}`);
+    return { dateStr: dateStrOut, ts };
+  }
+
   // ---------- panel collapse ----------
   window.togglePanel = function(id){
     document.getElementById(id).classList.toggle('collapsed');
@@ -936,7 +1060,30 @@
       else if(e.key === 'ArrowDown'){ e.preventDefault(); shiftDateField(inputId, -1, onAfterChange); }
     });
   }
-  wireDateStepper('invDate', 'invDateUpBtn', 'invDateDownBtn', renderPreview);
+  wireDateStepper('invDate', 'invDateUpBtn', 'invDateDownBtn', () => { renderPreview(); updateServiceReminderPreview(); });
+
+  // ---------- service reminder: form UI ----------
+  function updateServiceReminderPreview(){
+    const enabled = el('serviceReminderEnabled').checked;
+    el('serviceReminderMonthsRow').style.display = enabled ? 'grid' : 'none';
+    if(!enabled) return;
+    const months = Number(el('serviceReminderMonths').value) || 0;
+    const preview = el('nextServiceDatePreview');
+    if(months <= 0){ preview.textContent = 'تعداد ماه را وارد کنید'; return; }
+    const computed = computeNextServiceFromDateStr(el('invDate').value, months);
+    preview.textContent = computed ? computed.dateStr : 'تاریخ فاکتور نامعتبر است';
+  }
+  {
+    const savedDefaultMonths = storage.get('inv_default_reminder_months');
+    el('serviceReminderMonths').value = savedDefaultMonths || '6';
+  }
+  el('serviceReminderEnabled').addEventListener('change', updateServiceReminderPreview);
+  el('serviceReminderMonths').addEventListener('input', () => {
+    storage.set('inv_default_reminder_months', el('serviceReminderMonths').value.trim());
+    updateServiceReminderPreview();
+  });
+  digitsOnly(el('serviceReminderMonths'));
+  updateServiceReminderPreview();
 
   // ---------- suggested item presets (editable list) ----------
   const DEFAULT_PRESETS = [
@@ -1076,6 +1223,202 @@
 
   renderDatalist();
   renderPresetManagerList();
+
+  // ---------- invoice categories (tags for internal classification & later filtering) ----------
+  const DEFAULT_CATEGORIES = ['نصب', 'سرویس دوره‌ای', 'تعمیر فوری', 'سرویس عادی', 'بازدید و مشاوره'];
+
+  function loadCategoryBase(){
+    try{
+      const raw = storage.get('inv_categories_base');
+      if(raw === null){ saveCategoryBase(DEFAULT_CATEGORIES); return DEFAULT_CATEGORIES.slice(); }
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : DEFAULT_CATEGORIES.slice();
+    }catch(e){ return DEFAULT_CATEGORIES.slice(); }
+  }
+  function saveCategoryBase(arr){ storage.set('inv_categories_base', JSON.stringify(arr)); }
+  function loadCategoryRemoved(){
+    try{ return JSON.parse(storage.get('inv_categories_removed') || '[]'); }catch(e){ return []; }
+  }
+  function saveCategoryRemoved(arr){ storage.set('inv_categories_removed', JSON.stringify(arr)); }
+  function loadCategories(){
+    const base = loadCategoryBase();
+    const removed = loadCategoryRemoved();
+    return base.filter(c => !removed.includes(c));
+  }
+  function addCategoryValue(val){
+    val = val.trim();
+    if(!val) return;
+    const base = loadCategoryBase();
+    if(!base.includes(val)){ base.push(val); saveCategoryBase(base); }
+    saveCategoryRemoved(loadCategoryRemoved().filter(c => c !== val));
+  }
+  function removeCategoryValue(val){
+    const removed = loadCategoryRemoved();
+    if(!removed.includes(val)) removed.push(val);
+    saveCategoryRemoved(removed);
+  }
+  function permanentDeleteCategory(val){
+    saveCategoryBase(loadCategoryBase().filter(c => c !== val));
+    saveCategoryRemoved(loadCategoryRemoved().filter(c => c !== val));
+  }
+
+  function renderCategoryManagerList(){
+    const cats = loadCategories();
+    const wrap = el('categoryManagerList');
+    if(cats.length === 0){
+      wrap.innerHTML = '<div class="hint">لیست خالی است.</div>';
+      return;
+    }
+    wrap.innerHTML = cats.map(c => `
+      <span class="preset-chip">
+        ${escapeHtml(c)}
+        <button type="button" data-val="${escapeHtml(c)}" title="حذف موقت (با «بازگردانی به پیش‌فرض» برمی‌گردد)">✕</button>
+        <button type="button" class="perm-del" data-val="${escapeHtml(c)}" title="حذف همیشگی (حتی با بازگردانی هم برنمی‌گردد)">🗑</button>
+      </span>`).join('');
+  }
+
+  // برچسب‌های دسته‌بندی به‌صورت آرایهٔ JSON در همان فیلد مخفی ذخیره می‌شوند تا چند دسته هم‌زمان قابل انتخاب باشند
+  function categoriesOf(record){
+    if(record && Array.isArray(record.categories) && record.categories.length) return record.categories;
+    if(record && record.category) return [record.category]; // سازگاری با رکوردهای قدیمی تک‌دسته‌ای
+    return [];
+  }
+  function getSelectedCategories(){
+    try{ const arr = JSON.parse(el('invoiceCategory').value || '[]'); return Array.isArray(arr) ? arr : []; }
+    catch(e){ return []; }
+  }
+  function setSelectedCategories(arr){ el('invoiceCategory').value = JSON.stringify(arr); }
+
+  function renderCategoryButtons(){
+    const cats = loadCategories();
+    const selected = getSelectedCategories();
+    const panel = el('categoryDropdownPanel');
+    const label = el('categoryDropdownLabel');
+
+    // متن دکمهٔ اصلی
+    if(selected.length === 0) label.textContent = 'بدون دسته‌بندی';
+    else if(selected.length === 1) label.textContent = selected[0];
+    else label.textContent = `${toFa(selected.length)} دسته انتخاب شده: ${selected.join('، ')}`;
+
+    // محتوای پنل کشویی
+    if(cats.length === 0){
+      panel.innerHTML = '<div class="dropdown-select-empty">هنوز دسته‌بندی‌ای تعریف نشده؛ از بخش «مدیریت دسته‌بندی‌های فاکتور» اضافه کنید.</div>';
+      return;
+    }
+    panel.innerHTML = cats.map((c, i) => `
+      <label class="dropdown-select-option">
+        <input type="checkbox" data-cat="${escapeHtml(c)}" ${selected.includes(c) ? 'checked' : ''}>
+        ${escapeHtml(c)}
+      </label>`).join('') +
+      (selected.length ? '<button type="button" class="dropdown-select-clear" id="categoryClearBtn">پاک کردن انتخاب</button>' : '');
+  }
+
+  function toggleCategoryDropdown(forceOpen){
+    const dd = el('categoryDropdown');
+    const shouldOpen = forceOpen !== undefined ? forceOpen : !dd.classList.contains('open');
+    dd.classList.toggle('open', shouldOpen);
+  }
+  el('categoryDropdownTrigger').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCategoryDropdown();
+  });
+  el('categoryDropdownPanel').addEventListener('click', (e) => {
+    e.stopPropagation(); // با هر تیک، پنل بسته نشود تا چند مورد پشت‌سرهم انتخاب شود
+    const clearBtn = e.target.closest('#categoryClearBtn');
+    if(clearBtn){
+      setSelectedCategories([]);
+      renderCategoryButtons();
+      return;
+    }
+    const checkbox = e.target.closest('input[data-cat]');
+    if(!checkbox) return;
+    const cat = checkbox.getAttribute('data-cat');
+    let selected = getSelectedCategories();
+    selected = checkbox.checked ? selected.concat([cat]) : selected.filter(c => c !== cat);
+    setSelectedCategories(selected);
+    renderCategoryButtons();
+  });
+  document.addEventListener('click', (e) => {
+    const dd = el('categoryDropdown');
+    if(dd.classList.contains('open') && !dd.contains(e.target)) toggleCategoryDropdown(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') toggleCategoryDropdown(false);
+  });
+
+  function getCategoryFilterSelection(){
+    try{ const arr = JSON.parse(storage.get('inv_records_category_filter') || '[]'); return Array.isArray(arr) ? arr : []; }
+    catch(e){ return []; }
+  }
+  function setCategoryFilterSelection(arr){ storage.set('inv_records_category_filter', JSON.stringify(arr)); }
+  function renderCategoryFilterButtons(){
+    const cats = loadCategories();
+    // اگر دسته‌بندیِ فیلترشده دیگر وجود نداشته باشد (حذف شده)، از انتخاب فیلتر حذفش کن
+    const selected = getCategoryFilterSelection().filter(c => cats.includes(c));
+    setCategoryFilterSelection(selected);
+    let html = `<button type="button" class="btn outline sm${selected.length === 0 ? ' active' : ''}" data-cat-filter="__all__">همه</button>`;
+    html += cats.map(c =>
+      `<button type="button" class="btn outline sm${selected.includes(c) ? ' active' : ''}" data-cat-filter="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+    ).join('');
+    el('categoryFilterBtns').innerHTML = html;
+  }
+  el('categoryFilterBtns').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-cat-filter]');
+    if(!btn) return;
+    const val = btn.getAttribute('data-cat-filter');
+    if(val === '__all__'){
+      setCategoryFilterSelection([]);
+    } else {
+      let selected = getCategoryFilterSelection();
+      selected = selected.includes(val) ? selected.filter(c => c !== val) : selected.concat([val]);
+      setCategoryFilterSelection(selected);
+    }
+    renderCategoryFilterButtons();
+    renderRecordsList(el('recordSearch').value);
+  });
+
+  el('addCategoryBtn').addEventListener('click', () => {
+    const input = el('newCategoryInput');
+    if(!input.value.trim()) return;
+    addCategoryValue(input.value);
+    input.value = '';
+    renderCategoryManagerList();
+    renderCategoryButtons();
+    renderCategoryFilterButtons();
+    showToast('دسته‌بندی اضافه و ذخیره شد');
+  });
+  el('newCategoryInput').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); el('addCategoryBtn').click(); }
+  });
+  el('categoryManagerList').addEventListener('click', (e) => {
+    const permBtn = e.target.closest('button.perm-del');
+    if(permBtn){
+      const val = permBtn.getAttribute('data-val');
+      if(!confirm(`«${val}» برای همیشه از لیست دسته‌بندی‌ها حذف شود؟ حتی با «بازگردانی به پیش‌فرض» هم برنمی‌گردد.`)) return;
+      permanentDeleteCategory(val);
+      renderCategoryManagerList();
+      renderCategoryButtons();
+      renderCategoryFilterButtons();
+      return;
+    }
+    const btn = e.target.closest('button[data-val]');
+    if(!btn) return;
+    removeCategoryValue(btn.getAttribute('data-val'));
+    renderCategoryManagerList();
+    renderCategoryButtons();
+    renderCategoryFilterButtons();
+  });
+  el('resetCategoriesBtn').addEventListener('click', () => {
+    if(!confirm('همه دسته‌بندی‌های حذف‌شده به لیست برمی‌گردند (شامل مواردی که خودتان با دکمهٔ «ذخیره» اضافه کرده بودید؛ موارد حذف‌شدهٔ همیشگی برنمی‌گردند). ادامه می‌دهید؟')) return;
+    saveCategoryRemoved([]);
+    renderCategoryManagerList();
+    renderCategoryButtons();
+    renderCategoryFilterButtons();
+  });
+
+  renderCategoryManagerList();
+  renderCategoryButtons();
+  renderCategoryFilterButtons();
 
   // ---------- items ----------
   let itemSeq = 0;
@@ -1367,6 +1710,11 @@
     el('internalNote').value = '';
     el('paidStatus').value = '';
     syncPaidStatusButtons();
+    el('invoiceCategory').value = '';
+    renderCategoryButtons();
+    el('serviceReminderEnabled').checked = false;
+    el('serviceReminderMonths').value = storage.get('inv_default_reminder_months') || '6';
+    updateServiceReminderPreview();
     el('itemsWrap').innerHTML = '';
     addItemRow('', 1, '');
     renderPreview();
@@ -1499,6 +1847,7 @@
       invNumber: el('invNumber').value.trim(),
       invDate: el('invDate').value.trim(),
       paidStatus: el('paidStatus').value,
+      categories: getSelectedCategories(),
       custName: el('custName').value.trim(),
       custPhone: el('custPhone').value.trim(),
       custAddress: el('custAddress').value.trim(),
@@ -1511,6 +1860,8 @@
       taxPercent: el('taxPercent').value.trim(),
       note: el('note').value.trim(),
       internalNote: el('internalNote').value.trim(),
+      serviceReminderEnabled: el('serviceReminderEnabled').checked,
+      serviceReminderMonths: el('serviceReminderMonths').value.trim(),
     };
   }
 
@@ -1525,6 +1876,26 @@
     const record = Object.assign({ id, total: t.grandTotal, savedAt, updatedAt: Date.now() }, data);
     const idx = records.findIndex(r => r.id === id);
     if(idx > -1) records[idx] = record; else records.unshift(record);
+
+    // یادآوری سرویس دوره‌ای: اگر تازه فعال شده یا تعداد ماه/تاریخ فاکتور تغییر کرده، از نو محاسبه کن؛
+    // در غیر این صورت مقدار قبلی (که ممکن است از پنل «یادآوری‌ها» دستی تمدید شده باشد) دست‌نخورده می‌ماند.
+    if(record.serviceReminderEnabled){
+      const months = Number(record.serviceReminderMonths) || 0;
+      const wasEnabledBefore = !!(existing && existing.serviceReminderEnabled);
+      const monthsChanged = !existing || String(existing.serviceReminderMonths || '') !== String(record.serviceReminderMonths || '');
+      const dateChanged = !existing || existing.invDate !== record.invDate;
+      if(months > 0 && (!existing || !wasEnabledBefore || monthsChanged || dateChanged)){
+        const computed = computeNextServiceFromDateStr(record.invDate, months);
+        record.nextServiceDate = computed ? computed.dateStr : null;
+        record.nextServiceTs = computed ? computed.ts : null;
+      } else if(existing){
+        record.nextServiceDate = existing.nextServiceDate || null;
+        record.nextServiceTs = existing.nextServiceTs || null;
+      }
+    } else {
+      record.nextServiceDate = null;
+      record.nextServiceTs = null;
+    }
     saveRecordsArr(records);
     editingRecordId = id;
     renderRecordsList(el('recordSearch').value);
@@ -1532,6 +1903,7 @@
     renderOverdueList();
     renderCustomerProfile();
     renderInvNumberHint();
+    renderServiceReminders();
   }
 
   function statusInfo(paidStatus){
@@ -1562,6 +1934,7 @@
     renderRecordsList(el('recordSearch').value);
     renderReport();
     renderOverdueList();
+    renderServiceReminders();
     renderCustomerProfile();
     showToast('وضعیت پرداخت به‌روزرسانی شد');
   }
@@ -1589,7 +1962,8 @@
     const records = loadRecords();
     const qText = (filterText || '').trim().toLowerCase();
     const qDigits = normalizeDigits(filterText);
-    const filtered = !qText ? records : records.filter(r =>
+    const catFilter = getCategoryFilterSelection();
+    let filtered = !qText ? records : records.filter(r =>
       String(r.invNumber||'').toLowerCase().includes(qText) ||
       String(r.custName||'').toLowerCase().includes(qText) ||
       String(r.custPhone||'').toLowerCase().includes(qText) ||
@@ -1601,6 +1975,7 @@
         normalizeDigits(r.total).includes(qDigits)
       ))
     );
+    if(catFilter.length) filtered = filtered.filter(r => categoriesOf(r).some(c => catFilter.includes(c)));
     const listEl = el('recordsList');
     const emptyHint = el('recordsEmptyHint');
     if(filtered.length === 0){
@@ -1608,7 +1983,7 @@
       emptyHint.style.display = 'block';
       emptyHint.textContent = records.length === 0
         ? 'هنوز فاکتوری ثبت نشده است. بعد از گرفتن خروجی PDF از یک فاکتور، اینجا ثبت می‌شود.'
-        : 'نتیجه‌ای برای این جستجو پیدا نشد.';
+        : 'نتیجه‌ای برای این جستجو/فیلتر پیدا نشد.';
       return;
     }
     emptyHint.style.display = 'none';
@@ -1623,6 +1998,7 @@
             <div class="record-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
           </div>
           <div class="record-right">
+            ${categoriesOf(r).length ? `<span class="record-category-badge">🏷️ ${escapeHtml(categoriesOf(r).join('، '))}</span>` : ''}
             <span class="record-amount">${formatMoney(r.total)} ریال</span>
             ${overdue ? `<span class="overdue-badge">⚠️ ${toFa(daysSince(r.savedAt))} روز معوق</span>` : ''}
             ${quickStatusSelectHtml(r)}
@@ -1663,6 +2039,107 @@
   }
 
   el('overdueDays').addEventListener('input', () => { renderOverdueList(); renderRecordsList(el('recordSearch').value); });
+
+  // ---------- service reminders (recurring service due dates) ----------
+  function getReminderLeadDays(){
+    const v = Number(el('reminderLeadDays').value);
+    return (Number.isFinite(v) && v >= 0) ? v : 7;
+  }
+  function renderServiceReminders(){
+    storage.set('inv_reminder_lead_days', el('reminderLeadDays').value);
+    const leadDays = getReminderLeadDays();
+    const now = Date.now();
+    const records = loadRecords()
+      .filter(r => r.serviceReminderEnabled && r.nextServiceTs)
+      .sort((a, b) => a.nextServiceTs - b.nextServiceTs);
+    const listEl = el('serviceRemindersList');
+    const emptyHint = el('serviceRemindersEmptyHint');
+    if(records.length === 0){
+      listEl.innerHTML = '';
+      emptyHint.style.display = 'block';
+      return;
+    }
+    emptyHint.style.display = 'none';
+    listEl.innerHTML = records.map(r => {
+      const diffDays = Math.ceil((r.nextServiceTs - now) / 86400000);
+      let badgeHtml, cardClass = 'record-card';
+      if(diffDays < 0){
+        badgeHtml = `<span class="reminder-badge overdue">⚠️ ${toFa(Math.abs(diffDays))} روز از موعد گذشته</span>`;
+        cardClass += ' overdue';
+      } else if(diffDays <= leadDays){
+        badgeHtml = `<span class="reminder-badge soon">🔔 ${diffDays === 0 ? 'امروز موعد سرویس است' : toFa(diffDays) + ' روز تا موعد سرویس'}</span>`;
+      } else {
+        badgeHtml = `<span class="reminder-badge later">${toFa(diffDays)} روز دیگر</span>`;
+      }
+      return `
+        <div class="${cardClass}" data-id="${r.id}">
+          <div class="record-main">
+            <div class="record-title">${escapeHtml(r.custName || 'بدون نام')} — فاکتور ${escapeHtml(r.invNumber || '—')}</div>
+            <div class="record-sub">${escapeHtml(r.custPhone || '')} · سررسید سرویس بعدی: ${escapeHtml(r.nextServiceDate || '—')}</div>
+          </div>
+          <div class="record-right">
+            ${badgeHtml}
+            <button type="button" class="btn outline sm" data-extend="${r.id}">🔁 تمدید یک دوره</button>
+            <button type="button" class="record-delete" data-disable-reminder="${r.id}" title="غیرفعال کردن این یادآوری">🔕</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function extendServiceReminder(id){
+    const records = loadRecords();
+    const idx = records.findIndex(r => r.id === id);
+    if(idx === -1) return;
+    const r = records[idx];
+    const months = Number(r.serviceReminderMonths) || 0;
+    const baseDateStr = r.nextServiceDate || r.invDate;
+    const computed = computeNextServiceFromDateStr(baseDateStr, months);
+    if(!computed){ showToast('تعداد ماه یا تاریخ نامعتبر است'); return; }
+    r.nextServiceDate = computed.dateStr;
+    r.nextServiceTs = computed.ts;
+    saveRecordsArr(records);
+    if(editingRecordId === id) loadRecordIntoForm(r);
+    renderServiceReminders();
+    showToast('موعد سرویس بعدی تمدید شد');
+  }
+
+  el('reminderLeadDays').addEventListener('input', renderServiceReminders);
+  digitsOnly(el('reminderLeadDays'));
+  {
+    const savedLeadDays = storage.get('inv_reminder_lead_days');
+    if(savedLeadDays !== null) el('reminderLeadDays').value = savedLeadDays;
+  }
+
+  el('serviceRemindersList').addEventListener('click', (e) => {
+    const extendBtn = e.target.closest('[data-extend]');
+    if(extendBtn){
+      e.stopPropagation();
+      extendServiceReminder(extendBtn.getAttribute('data-extend'));
+      return;
+    }
+    const disableBtn = e.target.closest('[data-disable-reminder]');
+    if(disableBtn){
+      e.stopPropagation();
+      const id = disableBtn.getAttribute('data-disable-reminder');
+      const records = loadRecords();
+      const idx = records.findIndex(r => r.id === id);
+      if(idx > -1){
+        records[idx].serviceReminderEnabled = false;
+        saveRecordsArr(records);
+        if(editingRecordId === id){ el('serviceReminderEnabled').checked = false; updateServiceReminderPreview(); }
+        renderServiceReminders();
+        showToast('یادآوری غیرفعال شد');
+      }
+      return;
+    }
+    const card = e.target.closest('.record-card');
+    if(card){
+      const id = card.getAttribute('data-id');
+      const record = loadRecords().find(r => r.id === id);
+      if(record) loadRecordIntoForm(record);
+    }
+  });
+
   el('overdueList').addEventListener('click', (e) => {
     if(e.target.closest('.quick-status-select')) return;
     const card = e.target.closest('.record-card');
@@ -1775,6 +2252,7 @@
                   <div class="record-sub">${fmtDate(r.savedAt)}</div>
                 </div>
                 <div class="record-right">
+                  ${categoriesOf(r).length ? `<span class="record-category-badge">🏷️ ${escapeHtml(categoriesOf(r).join('، '))}</span>` : ''}
                   <span class="record-amount">${formatMoney(r.total)} ریال</span>
                   ${quickStatusSelectHtml(r)}
                 </div>
@@ -1861,12 +2339,14 @@
       }
       renderReport();
     renderOverdueList();
+    renderServiceReminders();
     });
   });
   function updateReportAfterDateChange(){
     document.querySelectorAll('.report-filter-row [data-range]').forEach(b => b.classList.remove('active'));
     renderReport();
     renderOverdueList();
+    renderServiceReminders();
   }
   ['input', 'change'].forEach(evt => {
     el('reportFrom').addEventListener(evt, updateReportAfterDateChange);
@@ -1894,6 +2374,7 @@
       renderRecordsList(el('recordSearch').value);
       renderReport();
     renderOverdueList();
+    renderServiceReminders();
       renderCustomerProfile();
       renderTrashList();
       renderInvNumberHint();
@@ -1913,6 +2394,8 @@
     el('invDate').value = record.invDate || '';
     el('paidStatus').value = record.paidStatus || '';
     syncPaidStatusButtons();
+    setSelectedCategories(categoriesOf(record));
+    renderCategoryButtons();
     el('custName').value = record.custName || '';
     el('custPhone').value = record.custPhone || '';
     el('custAddress').value = record.custAddress || '';
@@ -1924,6 +2407,9 @@
     el('taxPercent').value = record.taxPercent || '';
     el('note').value = record.note || '';
     el('internalNote').value = record.internalNote || '';
+    el('serviceReminderEnabled').checked = !!record.serviceReminderEnabled;
+    el('serviceReminderMonths').value = record.serviceReminderMonths || (storage.get('inv_default_reminder_months') || '6');
+    updateServiceReminderPreview();
     el('itemsWrap').innerHTML = '';
     const items = (record.items && record.items.length) ? record.items : [{}];
     items.forEach(it => addItemRow(it.description || '', it.qty || 1, it.unitPrice || '', it.detail || '', it.useCustomTax || false, it.customTaxPercent, it.unit));
@@ -2011,6 +2497,7 @@
       renderRecordsList(el('recordSearch').value);
       renderReport();
       renderOverdueList();
+      renderServiceReminders();
       renderCustomerProfile();
       showToast('فاکتور بازگردانده شد');
       renderInvNumberHint();
@@ -2029,6 +2516,7 @@
   renderRecordsList('');
   renderReport();
     renderOverdueList();
+    renderServiceReminders();
   renderTrashList();
 
   renderPreview();
