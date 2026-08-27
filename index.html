@@ -324,6 +324,20 @@
   }
   .dropdown-select-clear:hover{ color:var(--warn); }
 
+  /* ---------- customer autocomplete suggestions (suggest-only, never auto-fills) ---------- */
+  .customer-suggest-panel{
+    display:none; position:absolute; top:calc(100% + 4px); right:0; left:0; z-index:40;
+    background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(0,0,0,.14);
+    max-height:220px; overflow-y:auto; padding:4px;
+  }
+  .customer-suggest-panel.open{ display:block; }
+  .customer-suggest-item{
+    padding:8px 9px; border-radius:6px; cursor:pointer; font-size:12.5px;
+  }
+  .customer-suggest-item:hover{ background:#f2f2f2; }
+  .customer-suggest-item .cs-name{ font-weight:700; color:var(--ink); }
+  .customer-suggest-item .cs-sub{ font-size:11px; color:var(--muted); margin-top:1px; }
+
   /* ---------- Customer profile ---------- */
   .cust-profile-card{ border:1px solid var(--line); border-radius:8px; padding:16px; }
   .cust-profile-header{ display:flex; justify-content:space-between; align-items:flex-start; }
@@ -525,15 +539,18 @@
         <h2 onclick="togglePanel('panelCustomer')">👤 اطلاعات مشتری <span class="arrow">▾</span></h2>
         <div class="panel-body">
           <div class="row2">
-            <div class="field">
+            <div class="field" style="position:relative;">
               <label for="custName">نام مشتری</label>
-              <input type="text" id="custName">
+              <input type="text" id="custName" autocomplete="off">
+              <div class="customer-suggest-panel" id="custNameSuggest"></div>
             </div>
-            <div class="field">
+            <div class="field" style="position:relative;">
               <label for="custPhone">شماره تماس</label>
-              <input type="text" id="custPhone" inputmode="numeric">
+              <input type="text" id="custPhone" inputmode="numeric" autocomplete="off">
+              <div class="customer-suggest-panel" id="custPhoneSuggest"></div>
             </div>
           </div>
+          <div class="hint">همین‌طور که تایپ می‌کنید، اگر مشتری مشابهی قبلاً ثبت شده باشد، به‌عنوان پیشنهاد زیر همین کادر نشان داده می‌شود؛ تا خودتان روی پیشنهاد کلیک نکنید، هیچ فیلدی خودکار پر نمی‌شود.</div>
           <div class="field">
             <label for="custAddress">آدرس</label>
             <input type="text" id="custAddress">
@@ -1729,6 +1746,80 @@
     catch(e){ return []; }
   }
   function saveRecordsArr(arr){ storage.set('inv_records', JSON.stringify(arr)); }
+
+  // ---------- customer autocomplete suggestions (suggest-only; never fills fields on its own) ----------
+  function getCustomerSuggestions(query){
+    const q = (query || '').trim().toLowerCase();
+    if(!q) return [];
+    const qDigits = normalizeDigits(query);
+    // مشتری‌های تکراری را بر اساس شماره تلفن (یا نام، اگر تلفن نداشت) یکی می‌کنیم و آخرین فاکتورشان را نگه می‌داریم
+    const byCustomer = new Map();
+    loadRecords().forEach(r => {
+      const key = (r.custPhone && r.custPhone.trim())
+        ? 'p:' + normalizeDigits(r.custPhone)
+        : (r.custName && r.custName.trim() ? 'n:' + r.custName.trim().toLowerCase() : null);
+      if(!key) return;
+      const existing = byCustomer.get(key);
+      if(!existing || (r.savedAt || 0) > (existing.savedAt || 0)) byCustomer.set(key, r);
+    });
+    const matches = Array.from(byCustomer.values()).filter(r =>
+      String(r.custName || '').toLowerCase().includes(q) ||
+      String(r.custAddress || '').toLowerCase().includes(q) ||
+      (qDigits && normalizeDigits(r.custPhone).includes(qDigits))
+    );
+    matches.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    return matches.slice(0, 6);
+  }
+  function renderCustomerSuggestPanel(panelId, query){
+    const panel = el(panelId);
+    const matches = getCustomerSuggestions(query);
+    if(matches.length === 0){ panel.classList.remove('open'); panel.innerHTML = ''; return; }
+    panel.innerHTML = matches.map(r => `
+      <div class="customer-suggest-item" data-id="${r.id}">
+        <div class="cs-name">${escapeHtml(r.custName || 'بدون نام')}</div>
+        <div class="cs-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
+      </div>`).join('');
+    panel.classList.add('open');
+  }
+  function hideCustomerSuggestPanel(panelId){
+    el(panelId).classList.remove('open');
+  }
+  function applyCustomerSuggestion(record){
+    el('custName').value = record.custName || '';
+    el('custPhone').value = record.custPhone || '';
+    el('custAddress').value = record.custAddress || '';
+    el('custEconomicId').value = record.custEconomicId || '';
+    el('custNationalId').value = record.custNationalId || '';
+    el('custPostalCode').value = record.custPostalCode || '';
+    el('alwaysShowCustIds').checked = !!record.alwaysShowCustIds;
+    renderPreview();
+    showToast('اطلاعات مشتری پر شد');
+  }
+
+  el('custName').addEventListener('input', () => renderCustomerSuggestPanel('custNameSuggest', el('custName').value));
+  el('custName').addEventListener('focus', () => { if(el('custName').value.trim()) renderCustomerSuggestPanel('custNameSuggest', el('custName').value); });
+  el('custPhone').addEventListener('input', () => renderCustomerSuggestPanel('custPhoneSuggest', el('custPhone').value));
+  el('custPhone').addEventListener('focus', () => { if(el('custPhone').value.trim()) renderCustomerSuggestPanel('custPhoneSuggest', el('custPhone').value); });
+
+  // از mousedown به‌جای click استفاده می‌کنیم تا قبل از بسته‌شدن پنل به‌خاطر blur اجرا شود
+  ['custNameSuggest', 'custPhoneSuggest'].forEach(panelId => {
+    el(panelId).addEventListener('mousedown', (e) => {
+      const item = e.target.closest('.customer-suggest-item');
+      if(!item) return;
+      e.preventDefault();
+      const record = loadRecords().find(r => r.id === item.getAttribute('data-id'));
+      if(record) applyCustomerSuggestion(record);
+      hideCustomerSuggestPanel('custNameSuggest');
+      hideCustomerSuggestPanel('custPhoneSuggest');
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if(!e.target.closest('#custName') && !e.target.closest('#custNameSuggest')) hideCustomerSuggestPanel('custNameSuggest');
+    if(!e.target.closest('#custPhone') && !e.target.closest('#custPhoneSuggest')) hideCustomerSuggestPanel('custPhoneSuggest');
+  });
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape'){ hideCustomerSuggestPanel('custNameSuggest'); hideCustomerSuggestPanel('custPhoneSuggest'); }
+  });
 
   // ---------- invoice number: show last-used number & warn on duplicates ----------
   function getLastUsedInvoiceNumber(){
