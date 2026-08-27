@@ -17,8 +17,37 @@
     --panel:#ffffff;
     --warn:#b3261e;
     --ok:#2f8a4e;
+    --accent:#111111;
+    --accent-text:#ffffff;
     --radius:10px;
   }
+  body.dark-mode{
+    --bg:#15171b;
+    --panel:#1e2126;
+    --ink:#eceff1;
+    --muted:#98a2ad;
+    --line:#33383f;
+    --line-soft:#282c32;
+    --warn:#ff7b72;
+    --ok:#5fce93;
+    --accent:#eceff1;
+    --accent-text:#15171b;
+  }
+  /* برگهٔ خود فاکتور همیشه دقیقاً همان چیزی است که چاپ می‌شود، پس صرف‌نظر از حالت تاریک محیط کار، همیشه روشن می‌ماند */
+  body.dark-mode #invoiceSheet{
+    --ink:#111111; --muted:#5b6b6e; --line:#dcdcdc; --line-soft:#eeeeee;
+    --bg:#f5f5f4; --panel:#ffffff; --warn:#b3261e; --ok:#2f8a4e;
+    --accent:#111111; --accent-text:#ffffff;
+  }
+  .dark-mode-toggle{
+    position:fixed; top:16px; left:16px; z-index:9999;
+    width:42px; height:42px; border-radius:50%;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.15);
+  }
+  .dark-mode-toggle:hover{ opacity:.85; }
+  body.dark-mode #editingBanner{ background:#3a2f10 !important; border-color:#5c4b1a !important; color:#e8c565 !important; }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
@@ -76,7 +105,7 @@
     border-radius:8px;
     padding:9px 11px;
     font-size:13.5px;
-    background:#fff;
+    background:var(--panel);
     color:var(--ink);
     width:100%;
   }
@@ -95,27 +124,27 @@
   .date-field-wrap input{ flex:1; min-width:0; }
   .date-step-btns{ display:flex; flex-direction:column; gap:2px; }
   .date-step-btn{
-    width:28px; flex:1; border:1px solid var(--line); background:#fff; cursor:pointer;
+    width:28px; flex:1; border:1px solid var(--line); background:var(--panel); cursor:pointer;
     font-size:9px; line-height:1; border-radius:5px; padding:0; color:var(--muted);
     display:flex; align-items:center; justify-content:center;
   }
-  .date-step-btn:hover{ background:#f2f2f2; color:var(--ink); }
-  .date-step-btn:active{ background:#e8e8e8; }
+  .date-step-btn:hover{ background:var(--line-soft); color:var(--ink); }
+  .date-step-btn:active{ background:var(--line); }
 
   .logo-row{ display:flex; align-items:center; gap:12px; }
   .logo-row input[type=file]{ min-width:0; max-width:100%; font-size:12px; }
   .logo-preview{
     width:100px; height:100px; border:1px dashed var(--line); border-radius:8px;
-    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:#fafafa;
+    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:var(--line-soft);
   }
   .logo-preview img{ width:100%; height:100%; object-fit:contain; }
   .logo-preview span{ font-size:10.5px; color:var(--muted); text-align:center; padding:2px; }
 
   .btn{
     font-family:inherit;
-    border:1px solid var(--ink);
-    background:var(--ink);
-    color:#fff;
+    border:1px solid var(--accent);
+    background:var(--accent);
+    color:var(--accent-text);
     border-radius:8px;
     padding:10px 16px;
     font-size:13.5px;
@@ -123,21 +152,21 @@
     font-weight:600;
   }
   .btn:hover{ opacity:.88; }
-  .btn.outline{ background:#fff; color:var(--ink); }
+  .btn.outline{ background:var(--panel); color:var(--ink); }
   .btn.ghost{ background:transparent; color:var(--muted); border-color:var(--line); font-weight:400; }
   .btn.sm{ padding:6px 10px; font-size:12.5px; }
-  .btn.danger{ color:var(--warn); border-color:var(--warn); background:#fff; }
+  .btn.danger{ color:var(--warn); border-color:var(--warn); background:var(--panel); }
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
 
   .status-btn-group{ display:flex; gap:8px; flex-wrap:wrap; }
   .status-btn{
     font-family:inherit; flex:1; min-width:100px;
-    border:1px solid var(--line); background:#fff; color:var(--muted);
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
     border-radius:8px; padding:9px 8px; font-size:12.5px; font-weight:600;
     cursor:pointer; text-align:center; white-space:nowrap;
   }
   .status-btn:hover{ border-color:var(--ink); }
-  .status-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .status-btn.active{ background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
   @media (max-width: 480px){
     .status-btn{ min-width:0; padding:9px 4px; font-size:11px; }
   }
@@ -276,7 +305,7 @@
     display:flex; justify-content:space-between; align-items:center; gap:12px;
     cursor:pointer; flex-wrap:wrap;
   }
-  .record-card:hover{ border-color:var(--ink); background:#fafafa; }
+  .record-card:hover{ border-color:var(--ink); background:var(--line-soft); }
   .record-main{ display:flex; flex-direction:column; gap:3px; min-width:200px; }
   .record-title{ font-weight:700; font-size:13.5px; }
   .record-sub{ font-size:11.5px; color:var(--muted); }
@@ -288,6 +317,8 @@
   .record-status.pending{ background:#eef2f6; color:#3a5a78; }
   .record-card.overdue{ border-color:#e0a0a0; background:#fff8f7; }
   .record-card.overdue:hover{ background:#fdeeed; }
+  body.dark-mode .record-card.overdue{ border-color:#6b3a3a; background:#2a1c1c; }
+  body.dark-mode .record-card.overdue:hover{ background:#33201f; }
   .overdue-badge{ font-size:10px; font-weight:700; color:var(--warn); background:#fdecea; padding:3px 9px; border-radius:100px; white-space:nowrap; }
   .reminder-badge{ font-size:10px; font-weight:700; padding:3px 9px; border-radius:100px; white-space:nowrap; }
   .reminder-badge.overdue{ color:var(--warn); background:#fdecea; }
@@ -299,7 +330,7 @@
   .dropdown-select{ position:relative; }
   .dropdown-select-trigger{
     width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
-    font-family:inherit; border:1px solid var(--line); background:#fff; color:var(--ink);
+    font-family:inherit; border:1px solid var(--line); background:var(--panel); color:var(--ink);
     border-radius:8px; padding:9px 11px; font-size:13.5px; cursor:pointer; text-align:right;
   }
   .dropdown-select-trigger:hover{ border-color:var(--ink); }
@@ -308,14 +339,14 @@
   .dropdown-select.open .dropdown-arrow{ transform:rotate(180deg); }
   .dropdown-select-panel{
     display:none; position:absolute; top:calc(100% + 6px); right:0; left:0; z-index:30;
-    background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(0,0,0,.14);
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(0,0,0,.14);
     padding:6px; max-height:240px; overflow-y:auto;
   }
   .dropdown-select.open .dropdown-select-panel{ display:block; }
   .dropdown-select-option{
     display:flex; align-items:center; gap:8px; padding:8px 8px; border-radius:6px; cursor:pointer; font-size:13px;
   }
-  .dropdown-select-option:hover{ background:#f2f2f2; }
+  .dropdown-select-option:hover{ background:var(--line-soft); }
   .dropdown-select-option input{ width:15px; height:15px; margin:0; flex-shrink:0; }
   .dropdown-select-empty{ font-size:12px; color:var(--muted); padding:8px; }
   .dropdown-select-clear{
@@ -327,14 +358,14 @@
   /* ---------- customer autocomplete suggestions (suggest-only, never auto-fills) ---------- */
   .customer-suggest-panel{
     display:none; position:absolute; top:calc(100% + 4px); right:0; left:0; z-index:40;
-    background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(0,0,0,.14);
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 22px rgba(0,0,0,.14);
     max-height:220px; overflow-y:auto; padding:4px;
   }
   .customer-suggest-panel.open{ display:block; }
   .customer-suggest-item{
     padding:8px 9px; border-radius:6px; cursor:pointer; font-size:12.5px;
   }
-  .customer-suggest-item:hover{ background:#f2f2f2; }
+  .customer-suggest-item:hover{ background:var(--line-soft); }
   .customer-suggest-item .cs-name{ font-weight:700; color:var(--ink); }
   .customer-suggest-item .cs-sub{ font-size:11px; color:var(--muted); margin-top:1px; }
 
@@ -360,7 +391,7 @@
   .preset-chip{
     display:flex; align-items:center; gap:4px;
     border:1px solid var(--line); border-radius:100px;
-    padding:5px 6px 5px 12px; font-size:12px; background:#fafafa;
+    padding:5px 6px 5px 12px; font-size:12px; background:var(--line-soft);
   }
   .preset-chip button{
     background:none; border:none; color:var(--warn); cursor:pointer; font-size:13px;
@@ -375,7 +406,7 @@
 
   /* ---------- Income report ---------- */
   .report-filter-row{ display:flex; gap:8px; flex-wrap:wrap; }
-  .report-filter-row .btn.active{ background:var(--ink); color:#fff; }
+  .report-filter-row .btn.active{ background:var(--accent); color:var(--accent-text); }
   .report-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; }
   .report-card{ border:1px solid var(--line); border-radius:8px; padding:14px; text-align:center; }
   .report-card .num{ font-size:18px; font-weight:800; }
@@ -386,6 +417,7 @@
   .report-card.pending .num{ color:#3a5a78; }
 
   @media print{
+    .dark-mode-toggle{ display:none !important; }
     .form-col{ display:none !important; }
     .records-wrap{ display:none !important; }
     .layout{ display:block; padding:0; max-width:none; }
@@ -402,6 +434,9 @@
 </style>
 </head>
 <body>
+
+  <button type="button" id="darkModeToggle" class="dark-mode-toggle" title="حالت تاریک / روشن">🌙</button>
+
 
   <div class="layout">
     <!-- ============ FORM COLUMN ============ -->
@@ -854,6 +889,19 @@
     }
   };
 
+  // ---------- dark mode (workspace UI only; the invoice sheet itself always stays light for accurate print preview) ----------
+  function applyDarkMode(isOn){
+    document.body.classList.toggle('dark-mode', isOn);
+    const btn = document.getElementById('darkModeToggle');
+    if(btn) btn.textContent = isOn ? '☀️' : '🌙';
+  }
+  applyDarkMode(storage.get('inv_dark_mode') === '1');
+  document.getElementById('darkModeToggle').addEventListener('click', () => {
+    const next = !document.body.classList.contains('dark-mode');
+    storage.set('inv_dark_mode', next ? '1' : '0');
+    applyDarkMode(next);
+  });
+
   // ---------- Jalali (Persian) date for default value ----------
   function toJalali(gy, gm, gd){
     const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
@@ -974,7 +1022,7 @@
     if(!t){
       t = document.createElement('div');
       t.id = 'miniToast';
-      t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:100px; font-size:12.5px; z-index:9999; opacity:0; transition:opacity .2s;';
+      t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent); color:var(--accent-text); padding:10px 18px; border-radius:100px; font-size:12.5px; z-index:9999; opacity:0; transition:opacity .2s;';
       document.body.appendChild(t);
     }
     t.textContent = msg;
