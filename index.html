@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>فاکتورساز خدمات کولر گازی</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2817,6 +2821,19 @@
     renderOverdueList();
     renderServiceReminders();
   renderTrashList();
+
+  // ---------- نصب به‌عنوان اپ (PWA): فقط روی آدرس http/https فعال می‌شود، از روی فایل محلی بی‌اثر است ----------
+  if(location.protocol === 'https:' || location.protocol === 'http:'){
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => { /* ثبت نشد؛ سایت همچنان عادی کار می‌کند */ });
+      });
+    }
+    // درخواست ذخیرهٔ پایدار، تا مرورگر هنگام کمبود فضا اطلاعات فاکتورها را پاک نکند
+    if(navigator.storage && navigator.storage.persist){
+      navigator.storage.persist().catch(() => {});
+    }
+  }
 
   renderPreview();
 })();
