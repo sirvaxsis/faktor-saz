@@ -132,6 +132,9 @@
   .field input:focus, .field textarea:focus{ outline:2px solid var(--ink); outline-offset:1px; }
   .field textarea{ resize:vertical; min-height:60px; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width: 480px){
+    .row2{ grid-template-columns:1fr; gap:10px; }
+  }
 
   @media (max-width: 560px){
     /* iOS Safari auto-zooms into any focused input under 16px; keeping all form fields at
@@ -367,6 +370,16 @@
   .reminder-badge.soon{ color:#8a5a10; background:#fdf1e0; }
   .reminder-badge.later{ color:#3a5a78; background:#eef2f6; }
   .record-category-badge{ font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:100px; background:#f0eaf7; color:#6a3fa0; white-space:nowrap; }
+
+  @media (max-width: 560px){
+    .records-wrap{ padding:0 12px 16px; }
+    .record-card{ padding:10px 12px; gap:8px; }
+    .record-main{ min-width:0; width:100%; }
+    .record-right{ width:100%; flex-wrap:wrap; gap:6px 8px; justify-content:flex-start; }
+    .record-title{ font-size:13px; }
+    .record-sub{ font-size:11px; }
+    .record-amount{ font-size:12.5px; }
+  }
 
   /* ---------- dropdown / popover multi-select (used for invoice categories) ---------- */
   .dropdown-select{ position:relative; }
