@@ -469,6 +469,21 @@
   .report-card.unpaid .num{ color:#8a5a10; }
   .report-card.pending .num{ color:#3a5a78; }
 
+  /* کارت‌های لیست (فاکتورهای ثبت‌شده، معوق، یادآوری‌ها، سطل زباله، پروفایل مشتری) */
+  .record-card{ min-width:0; }
+  .record-main{ flex:1 1 200px; min-width:0; overflow-wrap:anywhere; }
+  .record-right{ flex-wrap:wrap; min-width:0; max-width:100%; }
+  @media (max-width: 560px){
+    .record-card{ flex-direction:column; align-items:stretch; gap:10px; padding:12px; }
+    .record-main{ flex:none; min-width:0; width:100%; }
+    .record-right{ width:100%; justify-content:flex-start; gap:8px; }
+    .record-right .record-amount{ flex-basis:100%; font-size:14px; }
+    .record-right .btn.sm{ white-space:nowrap; }
+    .record-right .record-delete{ margin-inline-start:auto; }
+    .quick-status-select{ font-size:12px; padding:6px 10px 6px 24px; }
+    .cust-profile-card{ padding:12px; }
+  }
+
   @media (max-width: 560px){
     .sticky-actions{ padding:12px; gap:8px; }
     .sticky-actions > .hint:last-child{ display:none; }
