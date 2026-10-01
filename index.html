@@ -490,6 +490,31 @@
     .sticky-actions .totals-mini{ font-size:12px; }
   }
 
+  /* English / LTR */
+  body.lang-en .inv-meta{ text-align:right; }
+  body.lang-en .dropdown-select-trigger{ text-align:left; }
+  body.lang-en .item-row .line-total{ text-align:right; }
+  body.lang-en .quick-status-select{ background-position:right 6px center; padding:4px 8px 4px 22px; }
+  @media (max-width:560px){ body.lang-en .quick-status-select{ padding:6px 24px 6px 10px; } }
+  body.lang-en .panel h2 .arrow{ order:2; }
+  /* در حالت انگلیسی فرم سمت چپ است؛ جا برای دکمه‌های شناور (تاریک/زبان) بالای صفحه باز می‌کنیم تا روی عنوان پنل‌ها نیفتند */
+  body.lang-en .layout{ padding-top:70px; }
+  /* پیش‌نمایش فاکتور روی موبایل: به‌جای اسکرول افقی و فشرده‌شدن ستون‌ها، فاکتور با عرض ثابت ۶۴۰ پیکسل
+     چیده می‌شود و با ضریب --screen-scale (که اسکریپت بر اساس عرض صفحه حساب می‌کند) کوچک می‌شود تا کامل در صفحه جا شود. */
+  @media (max-width: 560px){
+    .report-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+    .report-card{ padding:10px 6px; }
+    .report-card .num{ font-size:15px; overflow-wrap:anywhere; }
+    .report-card .lbl{ font-size:11px; }
+    .records-wrap{ padding:0 12px 14px; }
+  }
+
+  @media screen and (max-width: 760px){
+    #invoiceSheet{ width:640px; padding:24px 26px; font-size:13px; zoom:var(--screen-scale, 1); }
+    table.inv-table{ font-size:13px; }
+    .sheet-shadow{ overflow-x:hidden; }
+  }
+
   @media print{
     .dark-mode-toggle{ display:none !important; }
     .form-col{ display:none !important; }
@@ -509,6 +534,7 @@
 </head>
 <body>
 
+  <button type="button" id="langToggle" class="dark-mode-toggle" title="زبان" style="left:66px; font-size:13px; font-weight:700; font-family:inherit;">EN</button>
   <button type="button" id="darkModeToggle" class="dark-mode-toggle" title="حالت تاریک / روشن">🌙</button>
 
   <div class="layout">
@@ -948,8 +974,128 @@
 
 <script>
 (function(){
+  let LANG = 'fa';
+  try{ LANG = localStorage.getItem('inv_lang') === 'en' ? 'en' : 'fa'; }catch(e){}
+
+  // ================= Bilingual (Persian / English) =================
+  const D = [
+  ['نام فایل:','File name:'],['حذف همیشگی (حتی~','Delete permanently (not restored even by "Restore defaults")'],['در انتظار (چیزی روی فاکتور~','Pending (nothing is shown on the invoice)'],
+  ['حالت تاریک / روشن','Dark / light mode'],['زبان','Language'],
+  ['در حال ویرایش یک فاکتور~','You are editing a saved invoice; generating the PDF will update that record.'],['لغو ویرایش','Cancel edit'],
+  ['💾 پشتیبان‌گیری و بازیابی','💾 Backup & restore'],
+  ['همه‌ی اطلاعات این ابزار~','All data (saved invoices, company settings, logo, suggestion list) is stored only in this browser. If the cache is cleared or you switch device/browser, it is lost. Download a backup file regularly.'],
+  ['📥 دانلود پشتیبان','📥 Download backup'],['📤 بازیابی از فایل','📤 Restore from file'],
+  ['بازیابی، فایل پشتیبانی~','Restore puts a previously downloaded backup back into this or any other browser, replacing current data.'],
+  ['🏢 تنظیمات شرکت','🏢 Company settings'],['این اطلاعات در هدر فاکتور~','Shown in the invoice header and saved in this browser.'],
+  ['لوگو (اختیاری)','Logo (optional)'],['بدون لوگو','No logo'],['حذف لوگو','Remove logo'],['نام شرکت / فروشگاه','Company / shop name'],
+  ['مثلاً: شرکت خدمات کولر گازی برتر','e.g. Best AC Services Co.'],['تلفن','Phone'],['مثلاً: ۰۲۱-۸۸۷۷۶۶۵۵','e.g. 021-88776655'],['آدرس','Address'],
+  ['آدرس کامل فروشگاه/دفتر','Full shop/office address'],['شماره اقتصادی (اختیاری)','Economic ID (optional)'],['شناسه ملی (اختیاری)','National ID (optional)'],
+  ['کد پستی (اختیاری)','Postal code (optional)'],['نمایش نام «شماره اقتصادی»، «شناسه ملی»~','Show the Economic ID / National ID / Postal code labels on the invoice as blanks even if empty (to fill in by hand)'],
+  ['💳 اطلاعات پرداخت (اختیاری)~','💳 Payment info (optional) — shown as a separate box on the invoice.'],
+  ['نام بانک','Bank name'],['مثلاً ملت','e.g. Mellat'],['به نام','Account holder'],['نام صاحب حساب','Holder name'],['شماره کارت','Card number'],['شماره شبا','IBAN (Sheba)'],
+  ['📄 اطلاعات فاکتور','📄 Invoice info'],['شماره فاکتور','Invoice number'],['تاریخ','Date'],['مثلاً ۱۴۰۴/۰۴/۲۴','e.g. 1404/04/24'],['یک روز بعد','Next day'],['یک روز قبل','Previous day'],
+  ['وضعیت پرداخت','Payment status'],['🕓 در انتظار','🕓 Pending'],['⏳ پرداخت‌نشده','⏳ Unpaid'],['✅ پرداخت‌شده','✅ Paid'],['پرداخت‌نشده','Unpaid'],['پرداخت‌شده','Paid'],['در انتظار','Pending'],
+  ['دسته‌بندی فاکتور (اختیاری~','Invoice category (optional, multiple allowed)'],['بدون دسته‌بندی','No category'],
+  ['روی کادر بزنید تا لیست~','Click the box to open the list and tick several categories. For internal classification and filtering only; not printed on the invoice. Edit them in "Manage invoice categories".'],
+  ['🏷️ مدیریت دسته‌بندی‌های فاکتور','🏷️ Manage invoice categories'],['🔔 یادآوری سرویس دوره‌ای برای این مشتری','🔔 Periodic service reminder for this customer'],
+  ['هر چند ماه یک‌بار','Every how many months'],['مثلاً 6','e.g. 6'],['سررسید سرویس بعدی','Next service due'],['تعداد ماه را وارد کنید','Enter number of months'],['تاریخ فاکتور نامعتبر است','Invalid invoice date'],
+  ['این یادآوری فقط داخل همین ابزار~','This reminder is visible only inside this tool (see "Periodic service reminders" below); it is not printed.'],
+  ['👤 اطلاعات مشتری','👤 Customer info'],['نام مشتری','Customer name'],['شماره تماس','Phone'],
+  ['همین‌طور که تایپ می‌کنید~','While typing, similar saved customers appear as suggestions; nothing is filled in until you click one.'],
+  ['شناسه/شماره ملی (اختیاری)','National ID (optional)'],['شناسه/شماره ملی','National ID'],['نمایش نام «شماره اقتصادی»، «شناسه/شماره ملی»~','Show the customer Economic ID / National ID / Postal code labels on the invoice as blanks even if empty'],
+  ['🧰 اقلام فاکتور','🧰 Invoice items'],['شرح کالا/خدمات — تعداد/مقدار~','Description — quantity — unit (optional, e.g. pcs, m, kg) — unit price in'],['ریال','Rial'],
+  ['. برای «شرح»~','. For "description" pick from the suggestion list or type freely. The VAT column uses the percentage set in "Discount & tax".'],
+  ['نمایش ستون «واحد»~','Show the "Unit" column in the items table'],['نمایش ستون «ارزش افزوده»~','Show the "VAT" column in the items table'],['نمایش ستون «جمع کل ردیف»~','Show the "Row total" column (row amount including its tax)'],
+  ['+ افزودن ردیف','+ Add row'],['🧩 مدیریت لیست پیشنهادی اقلام','🧩 Manage item suggestions'],
+  ['این‌ها همون گزینه‌هایی هستند که هنگام نوشتن~','These are suggested when typing an item description. Add a new one and press "Save" to keep it. ✕ removes temporarily (restorable), 🗑 removes permanently.'],
+  ['این‌ها همون گزینه‌هایی هستند که برای «دسته‌بندی~','These are the options for "Invoice category"; you can filter saved invoices by them. Add a new one and press "Save". ✕ removes temporarily, 🗑 permanently.'],
+  ['افزودن مورد جدید به لیست','Add a new item to the list'],['مثلاً: تعویض والف برفک‌گیر','e.g. Replace defrost valve'],['💾 ذخیره','💾 Save'],['بازگردانی به لیست پیش‌فرض','Restore default list'],
+  ['افزودن دسته‌بندی جدید','Add a new category'],['مثلاً: نصب کولر تجاری','e.g. Commercial AC install'],
+  ['💰 تخفیف و مالیات','💰 Discount & tax'],['مبلغ تخفیف (ریال)','Discount amount (Rial)'],['درصد مالیات و عوارض','Tax & levy percentage'],['مثلاً 10','e.g. 10'],
+  ['توضیحات (اختیاری، روی خود فاکتور~','Notes (optional, printed on the invoice)'],['مثلاً: گارانتی سه ماهه~','e.g. 3-month warranty on replaced parts'],
+  ['📝 یادداشت داخلی کارشناس~','📝 Technician internal note (optional)'],['مثلاً: مشتری بدقلقه~','e.g. Call before visiting / spare part was needed but unavailable...'],
+  ['این یادداشت فقط برای خودتان~','Saved for you only; not shown on the printed invoice/PDF.'],['💵 سود خالص این فاکتور~','💵 Net profit of this invoice (optional, Rial)'],
+  ['فقط برای خودتان ذخیره می‌شود و روی فاکتور چاپی~','Saved for you only, not printed; summed in "📊 Income report" for the selected period.'],
+  ['📊 گزارش درآمد','📊 Income report'],['نام دلخواه برای فایل PDF','Custom name for the PDF file'],['نام فایل را بنویسید~','Type the file name (without .pdf)'],
+  ['⬇️ دریافت خروجی PDF','⬇️ Export PDF'],['فاکتور جدید','New invoice'],
+  ['دکمهٔ «دریافت خروجی PDF»~','The "Export PDF" button opens the browser print dialog; choose "Save as PDF" as the destination.'],
+  ['امروز','Today'],['7 روز اخیر','Last 7 days'],['30 روز اخیر','Last 30 days'],['کل بازه‌ها','All time'],['از تاریخ (شمسی)','From (Jalali date)'],['مثلاً ۱۴۰۴/۰۴/۰۱','e.g. 1404/04/01'],['تا تاریخ (شمسی)','To (Jalali date)'],['مثلاً ۱۴۰۴/۰۴/۳۰','e.g. 1404/04/30'],
+  ['تاریخ بر اساس زمانی است~','Dates refer to when each invoice was saved via "Export PDF"; the date field on the invoice does not affect this report.'],
+  ['⏰ فاکتورهای معوق','⏰ Overdue invoices'],['بیش از چند روز از صدور گذشته باشد','Older than how many days since issue'],
+  ['فاکتورهایی که «پرداخت‌نشده»~','Unpaid or pending invoices older than this many days are listed here.'],['فعلاً فاکتور معوقی~','No overdue invoices right now. 👌'],
+  ['🔔 یادآوری‌های سرویس دوره‌ای','🔔 Periodic service reminders'],['چند روز قبل از موعد~','Show a "soon" warning this many days before due'],
+  ['این لیست فقط فاکتورهایی را نشان~','Lists only invoices with the periodic reminder turned on. "🔁 Extend one period" moves the due date forward after a call/service, without a new invoice.'],
+  ['🔁 تمدید یک دوره','🔁 Extend one period'],['فعلاً یادآوری فعالی~','No active reminders.'],
+  ['👤 پروفایل مشتری','👤 Customer profile'],['نام، شماره تلفن یا آدرس مشتری','Customer name, phone or address'],['مثلاً: احمدی یا 0912~','e.g. Ahmadi or 0912... or Azadi'],
+  ['با نام، شماره تلفن یا آدرس جست‌وجو~','Search by name, phone or address to see purchase history, totals and invoice statuses.'],['نام، شماره تلفن یا آدرس مشتری را وارد کنید.','Enter a customer name, phone or address.'],
+  ['📚 فاکتورهای ثبت‌شده','📚 Saved invoices'],['فیلتر بر اساس دسته‌بندی','Filter by category'],['همه','All'],['جستجو بر اساس شماره فاکتور~','Search by invoice no., name, phone, address or amount'],['مثلاً: 1002 یا احمدی~','e.g. 1002 or Ahmadi or 0912... or 5000000'],
+  ['هنوز فاکتوری ثبت نشده~','No invoices saved yet. After exporting a PDF, it appears here.'],['نتیجه‌ای برای این جستجو~','No results for this search/filter.'],
+  ['🗑️ سطل زباله','🗑️ Trash'],['فاکتورهای حذف‌شده تا 7 روز~','Deleted invoices stay here for 7 days and can be restored; then they are purged.'],['سطل زباله خالی است.','Trash is empty.'],
+  ['↩️ بازگردانی','↩️ Restore'],['حذف همیشگی','Delete permanently'],['حذف','Delete'],['حذف ردیف','Remove row'],['بدون نام','No name'],['لیست خالی است.','List is empty.'],
+  ['هنوز دسته‌بندی‌ای تعریف نشده~','No categories yet; add some in "Manage invoice categories".'],['پاک کردن انتخاب','Clear selection'],
+  ['شرح کالا / خدمات (یا از فهرست~','Item / service description (or pick from list)'],['تعداد (اعشاری~','Quantity (decimals allowed)'],['واحد','Unit'],['قیمت واحد (ریال)','Unit price (Rial)'],
+  ['جزئیات بیشتر این ردیف~','More details for this row (optional)'],['🧾 مالیات جداگانه~','🧾 Separate tax for this row'],['٪ مالیات این ردیف','Tax % for this row'],
+  ['واحد این ردیف~','Unit of this row (optional)'],['تغییر سریع وضعیت پرداخت','Quick payment status change'],['غیرفعال کردن این یادآوری','Disable this reminder'],
+  ['حذف موقت~','Remove temporarily (returns with "Restore defaults")'],['مبلغ نهایی قابل پرداخت','Final amount payable'],
+  ['تعداد فاکتور','Invoices'],['جمع کل (ریال)','Total (Rial)'],['جمع پرداخت‌شده (ریال)','Paid total (Rial)'],['جمع پرداخت‌نشده (ریال)','Unpaid total (Rial)'],['جمع در انتظار (ریال)','Pending total (Rial)'],
+  ['سود خالص پرداخت‌شده (ریال)','Net profit – paid (Rial)'],['سود خالص پرداخت‌نشده (ریال)','Net profit – unpaid (Rial)'],['سود خالص در انتظار (ریال)','Net profit – pending (Rial)'],['جمع کل سود خالص (ریال)','Total net profit (Rial)'],
+  ['جمع کل خرید (ریال)','Total purchases (Rial)'],['جمع پرداخت‌شده','Paid total'],['جمع پرداخت‌نشده','Unpaid total'],['جمع در انتظار','Pending total'],
+  ['مشتری‌ای با این مشخصات~','No customer found.'],['چند مشتری/شماره مختلف~','Several customers match; be more specific or pick one:'],['بدون شماره','No phone'],
+  ['ردیف','No.'],['شرح کالا / خدمات','Item / service'],['تعداد / مقدار','Qty'],['مبلغ واحد (ریال)','Unit price (Rial)'],['قیمت کل (ریال)','Amount (Rial)'],['ارزش افزوده (ریال)','VAT (Rial)'],['جمع کل ردیف (ریال)','Row total (Rial)'],
+  ['هنوز ردیفی اضافه نشده~','No rows added yet'],['جمع کل','Total'],['مبلغ تخفیف','Discount'],['مبلغ کل پس از تخفیف','Total after discount'],['مبلغ نهایی','Final amount'],['اطلاعات پرداخت:','Payment info:'],['بانک','Bank'],['کارت','Card'],['شبا','IBAN'],
+  ['توضیحات:','Notes:'],['امضای کارشناس','Technician signature'],['امضا/مهر مشتری','Customer signature/stamp'],['نام شرکت شما','Your company name'],
+  ['لوگو','Logo'],['نام','Name'],['فاکتور','Invoice'],
+  ['حجم تصویر باید~','Image must be smaller than 1.2 MB.'],['یک فاکتور جدید و خالی~','Start a new empty invoice? (Company info is kept)'],
+  ['این مورد از قبل در لیست~','This item is already in the list'],['به لیست اضافه و ذخیره شد','Added to the list and saved'],['این دسته‌بندی از قبل~','This category already exists'],['دسته‌بندی اضافه و ذخیره شد','Category added and saved'],
+  ['اطلاعات مشتری پر شد','Customer info filled in'],['وضعیت پرداخت به‌روزرسانی شد','Payment status updated'],['موعد سرویس بعدی تمدید شد','Next service date extended'],['تعداد ماه یا تاریخ نامعتبر~','Invalid months or date'],
+  ['یادآوری غیرفعال شد','Reminder disabled'],['فاکتور بازگردانده شد','Invoice restored'],['فایل پشتیبان دانلود شد','Backup file downloaded'],['بازیابی انجام شد~','Restore done; reloading...'],
+  ['همه موارد حذف‌شده به لیست~','All removed items return to the list (including ones you added with "Save"; permanently deleted ones do not). Continue?'],['همه دسته‌بندی‌های حذف‌شده~','All removed categories return (permanently deleted ones do not). Continue?'],
+  ['این فاکتور به سطل زباله~','Move this invoice to the trash? It can be restored for 7 days.'],['این فاکتور برای همیشه~','Delete this invoice permanently? This cannot be undone.'],
+  ['نصب','Installation'],['سرویس دوره‌ای','Periodic service'],['تعمیر فوری','Urgent repair'],['سرویس عادی','Regular service'],['بازدید و مشاوره','Inspection & consultation'],
+  ['سرویس پنل داخلی','Indoor panel service'],['نصب و تعویض خازن','Capacitor install/replacement'],['تعویض موتور دمپر','Damper motor replacement'],['سرویس کولر اسپلیت (یونیت~','Split AC service (indoor & outdoor unit)'],
+  ['لوله مسی، عایق و پرایمر','Copper pipe, insulation & primer'],['هزینه نصب و وکیوم~','Split AC installation & vacuum'],['پایه کولر گازی','AC bracket'],['سوراخ‌کاری دیوار','Wall drilling'],['سرویس کولر اسپلیت','Split AC service'],
+  ['شارژ گاز تکمیلی','Gas top-up'],['نشتی‌یابی، وکیوم و شارژ گاز','Leak detection, vacuum & gas charge'],['تعمیر و تعویض سیم کنتاکتور','Contactor wire repair/replacement'],['عیب‌یابی و تعویض خازن','Fault finding & capacitor replacement'],
+  ['سرویس کولر پنجره‌ای','Window AC service'],['اجرت پک کردن~','Labour: packing & removal of AC'],['اجرت نصب کولر گازی','Labour: AC installation'],['لوله مسی، عایق، پرایمر و کابل','Copper pipe, insulation, primer & cable'],
+  ['کابل ۵×۱.۵','Cable 5×1.5'],['پرایمر','Primer'],['شلنگ درین','Drain hose'],['جوشکاری دو سر','Two-end brazing'],['تعمیر برد و هزینه~','Board repair incl. removal/refit'],['کنترل همه‌کاره','Universal remote'],['ایاب و ذهاب','Travel'],
+  ['تعویض کمپرسور','Compressor replacement'],['تعویض کاپاسیتور کمپرسور','Compressor capacitor replacement'],['شستشوی یونیت داخلی و بیرونی','Indoor/outdoor unit washing'],['تعویض فیلتر هوا','Air filter replacement'],
+  ['تعویض فن (موتور پروانه)','Fan motor replacement'],['تعویض ریموت کنترل','Remote control replacement'],['نصب براکت یونیت بیرونی','Outdoor unit bracket install'],['کابل‌کشی برق کولر','AC power cabling'],
+  ['بازدید و کارشناسی محل','Site inspection'],['حمل و نقل کولر','AC transport'],['تعویض ترموستات','Thermostat replacement'],['تمیزکاری فیلتر و بدنه کولر','Filter & body cleaning'],['تست عملکرد و بازدید نهایی~','Performance test & final inspection'],
+  ];
+  const DIG='۰۱۲۳۴۵۶۷۸۹', ADIG='٠١٢٣٤٥٦٧٨٩';
+  const toLatin = s => String(s).replace(/[۰-۹٠-٩]/g, c => { const i = DIG.indexOf(c); return i > -1 ? i : ADIG.indexOf(c); });
+  const nk = s => toLatin(s).replace(/[\u200c\s]+/g, '');
+  const EX = new Map(), PF = [];
+  D.forEach(([fa, en]) => { if(fa.endsWith('~')) PF.push([nk(fa.slice(0,-1)), en]); else EX.set(nk(fa), en); });
+  const RX = [
+    [/ — فاکتور (\S+)$/, ' — Invoice $1'],
+    [/فاکتور شماره (.*)/, 'Invoice No. $1'], [/^تاریخ: /, 'Date: '], [/^فاکتور (\S+) — /, 'Invoice $1 — '],
+    [/(\d+) فاکتور ثبت.?شده/, '$1 invoices saved'], [/^(\d+) فاکتور$/, '$1 invoice(s)'], [/^(\d+) روز معوق/, '$1 days overdue'],
+    [/⚠️ (\d+) روز از موعد گذشته/, '⚠️ $1 days past due'], [/🔔 (\d+) روز تا موعد سرویس/, '🔔 $1 days until service due'], [/امروز موعد سرویس است/, 'Service is due today'], [/^(\d+) روز دیگر$/, 'in $1 days'],
+    [/⚠️ (\d+) روز معوق/, '⚠️ $1 days overdue'], [/تا (\d+) روز دیگر قابل بازگردانی/, 'restorable for $1 more days'], [/سررسید سرویس بعدی: /, 'Next service due: '],
+    [/^(\d+) دسته انتخاب شده: /, '$1 categories selected: '], [/جمع مالیات و عوارض \(نرخ.?های متفاوت\)/, 'Total tax & levies (mixed rates)'], [/جمع مالیات و عوارض \((\d+)٪\)/, 'Total tax & levies ($1%)'],
+    [/^مالیات \(نرخ.?های متفاوت\)/, 'Tax (mixed rates)'], [/^مالیات \((\d+)٪\)/, 'Tax ($1%)'], [/\(٪(\d+) جداگانه\)/, '($1% separate)'],
+    [/آخرین شماره فاکتور ثبت.?شده: /, 'Last saved invoice number: '], [/این شماره قبلاً برای فاکتور «(.*)» استفاده شده/, 'This number was already used for invoice "$1"'],
+    [/^نام فایل: $/, 'File name: '], [/شماره اقتصادی: /, 'Economic ID: '], [/شناسه ملی: /, 'National ID: '], [/کد پستی: /, 'Postal code: '],
+    [/اولین خرید: /, 'First purchase: '], [/آخرین خرید: /, 'Last purchase: '], [/^فاکتور (?=\d)/, 'Invoice '], [/ ریال$/, ' Rial'], [/^بدون نام$/, 'No name'],
+    [/^«(.*)» برای همیشه از لیست.*$/, 'Delete "$1" permanently? It will not come back even after restoring defaults.'],
+    [/^این فایل شامل (\d+) مورد.*$/, 'This file contains $1 entries. Restoring replaces the current data in this browser. Continue?'],
+    [/^این فایل قابل بازیابی نیست: /, 'This file cannot be restored: '], [/^فاکتور /, 'Invoice '],
+  ];
+  function trCore(core){
+    const k = nk(core);
+    if(EX.has(k)) return EX.get(k);
+    for(const [p, en] of PF) if(k.startsWith(p)) return en;
+    let out = toLatin(core);
+    for(const [re, rep] of RX) out = out.replace(re, rep);
+    // لیست دسته‌بندی‌ها (جداشده با «،») فقط در برچسب‌های دسته‌بندی ترجمه می‌شود
+    const cm = out.match(/^(🏷️ |\d+ categories selected: )(.+)$/);
+    if(cm) out = cm[1] + cm[2].split('، ').map(x => EX.get(nk(x)) || x).join(', ');
+    return out;
+  }
+  function T(str){ return LANG === 'en' ? trCore(String(str)) : str; }
+
   const faDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
-  function toFa(n){ return String(n).replace(/[0-9]/g, d => faDigits[d]); }
+  function toFa(n){ return LANG === 'en' ? String(n) : String(n).replace(/[0-9]/g, d => faDigits[d]); }
   function escapeHtml(str){
     if(str === null || str === undefined) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -1928,7 +2074,7 @@
     }
     const addr = sanitizeFileName(el('custAddress').value);
     const date = toFa(sanitizeFileName(el('invDate').value.replace(/[\/\\]/g, '-')));
-    const base = addr || sanitizeFileName(el('custName').value) || ('فاکتور ' + (el('invNumber').value || ''));
+    const base = addr || sanitizeFileName(el('custName').value) || (T('فاکتور') + ' ' + (el('invNumber').value || ''));
     return [base, date].filter(Boolean).join(' - ');
   }
   function updatePdfNamePreview(){
@@ -2885,6 +3031,90 @@
     renderOverdueList();
     renderServiceReminders();
   renderTrashList();
+
+  const tx = new WeakMap(), at = new WeakMap();
+  const HAS = /[\u0600-\u06FF]/;
+  function trText(node){
+    const raw = node.data, rec = tx.get(node);
+    if(rec && rec.out === raw) return;
+    if(!HAS.test(raw) && !/[۰-۹]/.test(raw)) return;
+    const m = raw.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    if(!m[2]) return;
+    const out = m[1] + trCore(m[2]) + m[3];
+    if(out === raw) return;
+    tx.set(node, { orig: raw, out });
+    node.data = out;
+  }
+  function trAttrs(elm){
+    ['placeholder', 'title'].forEach(a => {
+      if(!elm.hasAttribute || !elm.hasAttribute(a)) return;
+      const raw = elm.getAttribute(a);
+      const rec = at.get(elm) || {}; if(rec[a] && rec[a].out === raw) return;
+      if(!HAS.test(raw)) return;
+      const out = trCore(raw); if(out === raw) return;
+      rec[a] = { orig: raw, out }; at.set(elm, rec); elm.setAttribute(a, out);
+    });
+  }
+  function walk(root, fn){
+    if(root.nodeType === 3){ trText(root); return; }
+    if(root.nodeType !== 1) return;
+    trAttrs(root);
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    let n; while((n = tw.nextNode())){ if(n.nodeType === 3) trText(n); else trAttrs(n); }
+  }
+  function restoreAll(){
+    const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    let n; while((n = tw.nextNode())){
+      if(n.nodeType === 3){ const r = tx.get(n); if(r && r.out === n.data){ n.data = r.orig; tx.delete(n); } }
+      else { const r = at.get(n); if(r) for(const a in r) if(n.getAttribute(a) === r[a].out) n.setAttribute(a, r[a].orig); at.delete(n); }
+    }
+    document.title = 'فاکتورساز خدمات کولر گازی';
+  }
+  const obs = new MutationObserver(muts => {
+    if(LANG !== 'en') return;
+    muts.forEach(m => {
+      if(m.type === 'characterData') trText(m.target);
+      else if(m.type === 'attributes') trAttrs(m.target);
+      else m.addedNodes.forEach(n => walk(n));
+    });
+  });
+  obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title'] });
+  const _confirm = window.confirm.bind(window), _alert = window.alert.bind(window);
+  window.confirm = m => _confirm(T(m)); window.alert = m => _alert(T(m));
+
+  function applyLang(){
+    const en = LANG === 'en';
+    document.documentElement.lang = en ? 'en' : 'fa';
+    document.documentElement.dir = en ? 'ltr' : 'rtl';
+    document.body.style.direction = en ? 'ltr' : 'rtl';
+    document.body.classList.toggle('lang-en', en);
+    el('langToggle').textContent = en ? 'فا' : 'EN';
+    if(en){ walk(document.body); document.title = 'AC Service Invoice Generator'; } else restoreAll();
+    ['invDate', 'reportFrom', 'reportTo'].forEach(id => { const v = el(id).value; el(id).value = en ? toLatin(v) : toFa(toLatin(v)); });
+    renderPreview(); renderRecordsList(el('recordSearch').value); renderReport(); renderOverdueList(); renderServiceReminders();
+    renderCustomerProfile(); renderTrashList(); renderInvNumberHint(); renderCategoryButtons(); renderCategoryFilterButtons();
+    renderCategoryManagerList(); renderPresetManagerList(); updateServiceReminderPreview(); updatePdfNamePreview();
+  }
+  el('langToggle').addEventListener('click', () => {
+    LANG = LANG === 'en' ? 'fa' : 'en';
+    storage.set('inv_lang', LANG);
+    applyLang();
+  });
+  if(LANG === 'en') applyLang();
+
+  // ---------- جا دادن پیش‌نمایش فاکتور در عرض صفحهٔ موبایل ----------
+  function fitSheetToScreen(){
+    const sheet = el('invoiceSheet');
+    const wrap = sheet.parentElement;
+    const DESIGN_W = 640;
+    if(window.innerWidth > 760){ sheet.style.removeProperty('--screen-scale'); return; }
+    const avail = wrap.clientWidth;
+    sheet.style.setProperty('--screen-scale', avail < DESIGN_W ? (avail / DESIGN_W).toFixed(4) : '1');
+  }
+  window.addEventListener('resize', fitSheetToScreen);
+  window.addEventListener('orientationchange', () => setTimeout(fitSheetToScreen, 200));
+  el('langToggle').addEventListener('click', () => setTimeout(fitSheetToScreen, 0));
+  fitSheetToScreen();
 
   renderPreview();
 })();
