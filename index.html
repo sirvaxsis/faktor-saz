@@ -2687,11 +2687,32 @@
   });
   updatePdfNamePreview();
 
+  function looksLikeNewInvoice(orig, cur){
+    // ویرایش‌های معمولی (مبلغ، تعداد، توضیحات، غلط املایی، وضعیت پرداخت) آزادند.
+    // اما اگر شمارهٔ فاکتور عوض شود، یا هم نام و هم تلفن مشتری عوض شود، یا بیشتر اقلام عوض شوند، یعنی فاکتور جدید است.
+    if(normalizeDigits(orig.invNumber) !== normalizeDigits(cur.invNumber)) return true;
+    const sameName = String(orig.custName || '').trim() === String(cur.custName || '').trim();
+    const samePhone = normalizeDigits(orig.custPhone) === normalizeDigits(cur.custPhone);
+    if(!sameName && !samePhone) return true;
+    const oldD = (orig.items || []).map(i => String(i.description || '').trim()).filter(Boolean);
+    const newD = (cur.items || []).map(i => String(i.description || '').trim()).filter(Boolean);
+    if(oldD.length){
+      const kept = oldD.filter(d => newD.includes(d)).length;
+      if(kept < oldD.length / 2) return true;
+    }
+    return false;
+  }
+
   el('printBtn').addEventListener('click', async () => {
     // قفل لایسنس: فقط ساخت «فاکتور جدید» محدود است؛ ویرایش و دریافت PDF فاکتورهای ثبت‌شده همیشه آزاد است
     if(window.__licOn && window.__licOn()){
-      const isNew = !(editingRecordId && loadRecords().some(r => r.id === editingRecordId));
+      const orig = editingRecordId ? loadRecords().find(r => r.id === editingRecordId) : null;
+      let isNew = !orig;
+      let forked = false;
+      // جلوگیری از دور زدن قفل: اگر کسی بدون اشتراک/اعتبار، فاکتور قدیمی را آن‌قدر ویرایش کند که عملاً فاکتور جدید شود، «فاکتور جدید» حساب می‌شود
+      if(orig && !(await window.__licIsUnlimited()) && looksLikeNewInvoice(orig, collectFormData())){ isNew = true; forked = true; }
       if(!(await window.__licGate(isNew))) return;
+      if(forked){ editingRecordId = null; el('editingBanner').style.display = 'none'; } // فاکتور قبلی دست‌نخورده می‌ماند و این یکی جدا ثبت می‌شود
     }
     saveCurrentAsRecord();
     applyPrintFitScale();
@@ -4012,6 +4033,7 @@
     window.__licOn = () => ON;
     window.__licRefresh = () => {};
     window.__licGate = async () => true;
+    window.__licIsUnlimited = async () => true;
     if(!ON) return;
 
     const LT = (fa, en) => LANG === 'en' ? en : fa;
@@ -4177,6 +4199,7 @@
       return false;
     }
     window.__licGate = gate;
+    window.__licIsUnlimited = async () => { await ready; return compute().unlimited; };
     window.__licRefresh = refreshUI;
     window.__licDebug = () => ({ deviceId, codes: codes.length, valid, state: compute() });
 
