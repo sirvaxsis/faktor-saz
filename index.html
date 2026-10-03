@@ -4028,7 +4028,7 @@
   // ---------- لایسنس و اشتراک (بررسی آفلاین کد امضاشده) ----------
   // تنظیمات در فایل license-config.js است. اگر publicKey خالی باشد، قفل خاموش است و همه‌چیز رایگان است.
   (function setupLicense(){
-    const CFG = Object.assign({ publicKey:null, freeInvoices:5, buyUrl:'', buyLabel:'', buyLabel_en:'', message:'', message_en:'', contact:'', contact_en:'', plans:[], showDeviceCode:true }, window.LICENSE_CONFIG || {});
+    const CFG = Object.assign({ publicKey:null, revokedUrl:'revoked.json', freeInvoices:5, buyUrl:'', buyLabel:'', buyLabel_en:'', message:'', message_en:'', contact:'', contact_en:'', plans:[], showDeviceCode:true }, window.LICENSE_CONFIG || {});
     const ON = !!(CFG.publicKey && typeof CFG.publicKey === 'object');
     window.__licOn = () => ON;
     window.__licRefresh = () => {};
@@ -4082,12 +4082,15 @@
       if(!p || p.v !== 1 || !['sub', 'pack', 'life'].includes(p.t) || !p.id) throw new Error('format');
       if(p.t === 'sub' && !(Number(p.exp) > 0)) throw new Error('format');
       if(p.t === 'pack' && !(Number.isInteger(p.n) && p.n >= 1 && p.n <= 10000)) throw new Error('format');
+      if(p.ol !== undefined && !(Number.isInteger(p.ol) && p.ol >= 1 && p.ol <= 365)) throw new Error('format');
       if(p.dev && normDev(p.dev) !== normDev(deviceId)) throw new Error('device');
       return p;
     }
 
     // ---- وضعیت ----
     let codes = [];          // کدهای واردشده (رشته)
+    let revoked = new Set(); // شناسهٔ کدهای باطل‌شده (از revoked.json)
+    let lastChk = 0;         // آخرین باری که لیست ابطال با موفقیت از سایت گرفته شد
     let valid = [];          // payload کدهایی که امضایشان تأیید شد
     let idbUsed = 0, idbPused = 0, idbSeen = 0;
     let readyResolve; const ready = new Promise(r => readyResolve = r);
@@ -4103,13 +4106,17 @@
     function records(){ try{ return loadRecords().length + loadTrash().length; }catch(e){ return 0; } }
     function compute(){
       const now = nowSafe();
-      const life = valid.some(p => p.t === 'life');
-      const subExp = valid.filter(p => p.t === 'sub').reduce((mx, p) => Math.max(mx, Number(p.exp) || 0), 0);
+      const live = valid.filter(p => !revoked.has(p.id));
+      // کدی که «الزام اتصال» دارد فقط تا ol روز بعد از آخرین بررسی آنلاین معتبر است
+      const active = live.filter(p => !p.ol || (lastChk && now - lastChk <= p.ol * 86400000));
+      const suspended = live.length > active.length, wasRevoked = valid.length > live.length;
+      const life = active.some(p => p.t === 'life');
+      const subExp = active.filter(p => p.t === 'sub').reduce((mx, p) => Math.max(mx, Number(p.exp) || 0), 0);
       const subActive = subExp > now;
       const freeUsed = Math.min(FREE_LIMIT, Math.max(freeUsedRead(), idbUsed, records()));
-      const packTotal = valid.filter(p => p.t === 'pack').reduce((sum, p) => sum + p.n, 0);
+      const packTotal = active.filter(p => p.t === 'pack').reduce((sum, p) => sum + p.n, 0);
       const packUsed = Math.max(packUsedRead(), idbPused);
-      return { life, subExp, subActive, unlimited: life || subActive, freeUsed, freeLeft: Math.max(0, FREE_LIMIT - freeUsed), packLeft: Math.max(0, packTotal - packUsed), packUsed, expired: !life && subExp > 0 && !subActive };
+      return { life, subExp, subActive, suspended, wasRevoked, unlimited: life || subActive, freeUsed, freeLeft: Math.max(0, FREE_LIMIT - freeUsed), packLeft: Math.max(0, packTotal - packUsed), packUsed, expired: !life && subExp > 0 && !subActive };
     }
     const dateStr = (ts) => { const t = toJalaliInputValue(new Date(ts)); return LANG === 'en' ? t.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)) : t; };
 
@@ -4122,6 +4129,8 @@
         if(c.packLeft > 0) parts.push(LT(toFa(c.packLeft) + ' فاکتور اعتباری', c.packLeft + ' credit invoice' + (c.packLeft > 1 ? 's' : '')));
         return { cls: (c.freeLeft + c.packLeft) <= 2 ? 'warn' : '', text: '🎁 ' + LT('باقی‌مانده: ', 'Remaining: ') + parts.join(LT(' + ', ' + ')) };
       }
+      if(c.suspended) return { cls:'warn', text: LT('🔒 برای ادامه، یک بار با اینترنت وصل شوید', '🔒 Connect to the internet once to continue') };
+      if(c.wasRevoked && !c.expired) return { cls:'warn', text: LT('🔒 کد شما باطل شده است', '🔒 Your code has been revoked') };
       return { cls:'warn', text: c.expired ? LT('🔒 اشتراک منقضی شده — تمدید کنید', '🔒 Subscription expired — renew') : LT('🔒 سهمیهٔ رایگان تمام شد — فعال‌سازی', '🔒 Free quota used — activate') };
     }
 
@@ -4139,7 +4148,7 @@
       overlay.setAttribute('data-mode', mode);
       el('licTitle').textContent = mode === 'blocked' ? LT('🔒 برای ساخت فاکتور جدید، لایسنس لازم است', '🔒 A license is needed to create a new invoice') : LT('🔑 لایسنس و اشتراک', '🔑 License & subscription');
       const defMsg = LT('سهمیهٔ رایگان شما تمام شده است. برای ساخت فاکتور جدید، اشتراک یا بستهٔ فاکتور تهیه کنید و کد فعال‌سازی را اینجا وارد کنید. فاکتورهای قبلی شما همچنان قابل مشاهده، ویرایش و دریافت PDF هستند.', 'Your free quota is used up. To create a new invoice, get a subscription or an invoice pack and enter the activation code here. Your existing invoices stay viewable, editable and exportable.');
-      el('licMsg').textContent = mode === 'blocked' ? (pick(CFG, 'message') || defMsg) : summary(c).text;
+      el('licMsg').textContent = mode === 'blocked' ? (c.suspended ? LT('برای تأیید اشتراک، دستگاه باید یک بار به اینترنت وصل شود. بعد از اتصال، صفحه را دوباره باز کنید.', 'To verify your subscription, connect this device to the internet once, then reopen the page.') : (c.wasRevoked && !c.unlimited) ? LT('کد فعال‌سازی شما باطل شده است. برای ادامه با فروشنده در تماس باشید.', 'Your activation code has been revoked. Please contact the seller.') : (pick(CFG, 'message') || defMsg)) : summary(c).text;
       const plans = Array.isArray(CFG.plans) ? CFG.plans : [];
       el('licPlans').innerHTML = plans.map(p => `<div class="lic-plan"><div><div class="pn">${escapeHtml(pick(p, 'title') || '')}</div>${pick(p, 'note') ? `<div class="pt">${escapeHtml(pick(p, 'note'))}</div>` : ''}</div><div class="pp">${escapeHtml(pick(p, 'price') || '')}</div></div>`).join('');
       const buy = el('licBuyBtn');
@@ -4171,16 +4180,23 @@
         const map = {
           format: LT('کد معتبر نیست؛ آن را کامل و بدون تغییر بچسبانید.', 'Invalid code; paste it completely and unchanged.'),
           sig: LT('کد معتبر نیست (امضا تأیید نشد).', 'Invalid code (signature check failed).'),
+          revoked: LT('این کد باطل شده است.', 'This code has been revoked.'),
           device: LT('این کد برای دستگاه دیگری صادر شده است.', 'This code was issued for another device.'),
           nocrypto: LT('این مرورگر امکان بررسی کد را ندارد؛ برنامه را با HTTPS و مرورگر به‌روز باز کنید.', 'This browser cannot verify codes; open the app over HTTPS in an up-to-date browser.'),
         };
         setStatus(map[e.message] || map.format, 'err'); return;
       }
+      if(revoked.has(p.id)){ setStatus(LT('این کد باطل شده است.', 'This code has been revoked.'), 'err'); return; }
       if(valid.some(v => v.id === p.id)){ setStatus(LT('این کد قبلاً فعال شده است.', 'This code is already activated.'), 'err'); return; }
       if(p.t === 'sub' && Number(p.exp) <= nowSafe()){ setStatus(LT('این کد منقضی شده است.', 'This code has expired.'), 'err'); return; }
       codes.push(code); valid.push(p);
       storage.set('inv_license', JSON.stringify(codes)); idbSet('codes', codes);
       el('licCodeInput').value = '';
+      if(p.ol){
+        const okSync = await syncRevoked();
+        if(!okSync){ lastChk = nowSafe(); storage.set('inv_lic_chk', String(lastChk)); idbSet('chk', lastChk); }
+        if(revoked.has(p.id)){ refreshUI(); setStatus(LT('این کد باطل شده است.', 'This code has been revoked.'), 'err'); return; }
+      }
       refreshUI();
       setStatus(p.t === 'life' ? LT('فعال شد: اشتراک دائمی.', 'Activated: lifetime license.')
         : p.t === 'sub' ? LT('فعال شد: اشتراک تا ', 'Activated: subscription until ') + dateStr(p.exp)
@@ -4188,9 +4204,31 @@
     }
     el('licActivateBtn').addEventListener('click', () => activate(el('licCodeInput').value));
 
+    async function syncRevoked(){
+      try{
+        const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        const timer = ctl ? setTimeout(() => ctl.abort(), 6000) : null;
+        const r = await fetch((CFG.revokedUrl || 'revoked.json') + '?t=' + Date.now(), { cache:'no-store', signal: ctl ? ctl.signal : undefined });
+        if(timer) clearTimeout(timer);
+        if(!r.ok) throw new Error('http');
+        const j = await r.json();
+        const list = Array.isArray(j) ? j : (j && Array.isArray(j.revoked) ? j.revoked : null);
+        if(!list) throw new Error('shape');
+        revoked = new Set(list.map(String));
+        lastChk = nowSafe();
+        storage.set('inv_lic_rev', JSON.stringify(list)); storage.set('inv_lic_chk', String(lastChk));
+        idbSet('rev', list); idbSet('chk', lastChk);
+        refreshUI();
+        return true;
+      }catch(e){ return false; }
+    }
+    window.addEventListener('online', () => { if(valid.length) syncRevoked(); });
+    document.addEventListener('visibilitychange', () => { if(!document.hidden && valid.length) syncRevoked(); });
+
     async function gate(isNew){
       await ready;
       if(!isNew) return true;
+      if(valid.length) await syncRevoked();
       const c = compute();
       if(c.unlimited) return true;
       if(c.freeLeft > 0){ freeUsedWrite(c.freeUsed + 1); refreshUI(); return true; }
@@ -4218,6 +4256,13 @@
           try{ const p = await verifyCode(code); if(!valid.some(v => v.id === p.id)){ valid.push(p); codes.push(code); } }catch(e){ /* کد نامعتبر یا برای دستگاه دیگر: نادیده */ }
         }
         storage.set('inv_license', JSON.stringify(codes));
+        try{
+          let sr = []; try{ sr = JSON.parse(storage.get('inv_lic_rev') || '[]'); }catch(e){}
+          const ir = await idbGet('rev');
+          revoked = new Set([].concat(Array.isArray(sr) ? sr : [], Array.isArray(ir) ? ir : []).map(String));
+          lastChk = Math.max(Number(storage.get('inv_lic_chk') || 0) || 0, Number(await idbGet('chk')) || 0);
+        }catch(e){}
+        if(valid.length) await syncRevoked();
         // کانتر را در همهٔ لایه‌ها هم‌تراز کن
         const c = compute(); freeUsedWrite(Math.max(c.freeUsed, freeUsedRead())); packUsedWrite(c.packUsed);
       }catch(e){}
