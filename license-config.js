@@ -9,7 +9,7 @@
 window.LICENSE_CONFIG = {
 
   // کلید عمومی (خروجی ابزار license-generator.html؛ یک شیء با kty/crv/x/y). خالی = قفل خاموش
-  publicKey: null,
+    publicKey: {"kty":"EC","crv":"P-256","x":"pFne4CuYe0mXZI8ZRCpomXzPgX1CeA-jdPCHllPjs0o","y":"NFzdpc1ipRW6G9jTyj2pWlzm0Ogu6SJ5rUr7qhx32Ew"},
   /* مثال:
   publicKey: { "kty": "EC", "crv": "P-256", "x": "....", "y": "...." },
   */
