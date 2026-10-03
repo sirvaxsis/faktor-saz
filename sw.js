@@ -1,6 +1,6 @@
 // سرویس‌ورکر: برنامه را برای کار آفلاین کش می‌کند.
 // هر بار نسخهٔ جدید index.html را منتشر کردید، عدد VERSION را یکی بالا ببرید.
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = 'factor-' + VERSION;
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
