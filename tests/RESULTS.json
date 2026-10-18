@@ -1,0 +1,277 @@
+[
+ {
+  "name": "1a: guest sees the auth modal on start (after choosing a job)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "1b: signup shows \"confirm your email\" message",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "1c: login refused before email confirmation",
+  "ok": true,
+  "detail": "ایمیل شما هنوز تأیید نشده است؛ لینک ارسال‌شده به ایمیل را باز کنید."
+ },
+ {
+  "name": "1d: login after confirmation works",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "1e: chip shows 5 free invoices",
+  "ok": true,
+  "detail": "☁️ alice · 5 فاکتور رایگان"
+ },
+ {
+  "name": "2a: five invoices created",
+  "ok": true,
+  "detail": "['ok', 'ok', 'ok', 'ok', 'ok']"
+ },
+ {
+  "name": "2b: server free_used = 5 and 5 invoices stored",
+  "ok": true,
+  "detail": "{'blocked': False, 'free_used': 5, 'import_count': 0, 'migrated_at': None, 'settings': {'inv_categories_base': '[\"نصب\",\"سرویس دوره\\u200cای\",\"تعمیر فوری\",\"سرویس عادی\",\"بازدید و مشاوره\"]', 'inv_categories_removed': '[]', 'inv_default_note': '', 'inv_default_reminder_months': '6', 'inv_default_reminder"
+ },
+ {
+  "name": "2c: local cache has the 5 server invoices",
+  "ok": true,
+  "detail": "5"
+ },
+ {
+  "name": "3a: 6th invoice blocked and paywall shown",
+  "ok": true,
+  "detail": "paywall"
+ },
+ {
+  "name": "3b: 6th invoice was NOT stored and quota unchanged",
+  "ok": true,
+  "detail": "['dc39599a-253b-4730-b2f3-3055db820ae1', 'ee59ca5c-fa57-46a4-a203-69fa4f77aa3a', 'f449c84b-d598-459e-a4d1-f9a329b160af', '675b47e0-ed5e-4121-9cba-3e495692f114', '2b26f532-3a54-44d7-bb10-1dee71efe171']"
+ },
+ {
+  "name": "3c: nothing extra in local cache after rejection",
+  "ok": true,
+  "detail": "5"
+ },
+ {
+  "name": "4a: second device/incognito sees the same 5 invoices",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "4b: quota is per account — 6th still blocked on the other device",
+  "ok": true,
+  "detail": "paywall"
+ },
+ {
+  "name": "6a: after clearing site data the app asks to sign in",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "6b: invoices come back after re-login",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "6c: clearing browser data did NOT reset the free quota",
+  "ok": true,
+  "detail": "paywall"
+ },
+ {
+  "name": "7a: direct API call cannot bypass the quota",
+  "ok": true,
+  "detail": "['quota_exceeded', 'quota_exceeded', 'quota_exceeded']"
+ },
+ {
+  "name": "7b: anonymous call to save_invoice is refused",
+  "ok": true,
+  "detail": "401"
+ },
+ {
+  "name": "8a: another account cannot read A's invoices (REST)",
+  "ok": true,
+  "detail": "[]"
+ },
+ {
+  "name": "8b: another account cannot delete A's invoice",
+  "ok": true,
+  "detail": "{'error': 'not_found', 'ok': False}"
+ },
+ {
+  "name": "8c: non-admin cannot call admin functions",
+  "ok": true,
+  "detail": "403"
+ },
+ {
+  "name": "9: 5 parallel requests for the last free invoice → exactly 1 succeeds, free_used = 5",
+  "ok": true,
+  "detail": "([True, False, False, False, False], {'blocked': False, 'free_used': 5, 'import_count': 0, 'migrated_at': None, 'settings': {}, 'settings_rev': 0})"
+ },
+ {
+  "name": "9b: replaying the same request id does not consume quota twice",
+  "ok": true,
+  "detail": "({'forked': False, 'id': 'carol-idem-xxxxxxxx', 'is_new': True, 'ok': True, 'rev': 1, 'state': {'blocked': False, 'free_left': 4, 'free_limit': 5, 'free_used': 1, 'pack_left': 0, 'paid': False, 'sub_active': False, 'sub_ends_at': None}, 'updated_at': '2026-10-18T03:06:17.399658Z'}, {'forked': False,"
+ },
+ {
+  "name": "9c: a plain edit does not consume quota",
+  "ok": true,
+  "detail": "{'forked': False, 'id': 'carol-idem-xxxxxxxx', 'is_new': False, 'ok': True, 'rev': 2, 'state': {'blocked': False, 'free_left': 4, 'free_limit': 5, 'free_used': 1, 'pack_left': 0, 'paid': False, 'sub_active': False, 'sub_ends_at': None}, 'updated_at': '2026-10-18T03:06:17.412360Z'}"
+ },
+ {
+  "name": "9d: an \"edit\" that changes number+customer is treated as a NEW invoice (original kept)",
+  "ok": true,
+  "detail": "{'forked': True, 'id': '13252261-4410-4794-b8a4-6dbaf4ae1bf7', 'is_new': True, 'ok': True, 'rev': 1, 'state': {'blocked': False, 'free_left': 3, 'free_limit': 5, 'free_used': 2, 'pack_left': 0, 'paid': False, 'sub_active': False, 'sub_ends_at': None}, 'updated_at': '2026-10-18T03:06:17.417823Z'}"
+ },
+ {
+  "name": "10a: first invoice for D",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "10b: offline save fails cleanly (no local record, no quota consumed)",
+  "ok": true,
+  "detail": "('timeout', {'blocked': False, 'free_used': 1, 'import_count': 0, 'migrated_at': None, 'settings': {'inv_categories_base': '[\"نصب\",\"سرویس دوره\\u200cای\",\"تعمیر فوری\",\"سرویس عادی\",\"بازدید و مشاوره\"]', 'inv_categories_removed': '[]', 'inv_default_note': '', 'inv_default_reminder_months': '6', 'inv_defa"
+ },
+ {
+  "name": "10c: response lost after server commit → retry is idempotent (exactly +1 consumed)",
+  "ok": true,
+  "detail": "('ok', {'blocked': False, 'free_used': 2, 'import_count': 0, 'migrated_at': None, 'settings': {'inv_categories_base': '[\"نصب\",\"سرویس دوره\\u200cای\",\"تعمیر فوری\",\"سرویس عادی\",\"بازدید و مشاوره\"]', 'inv_categories_removed': '[]', 'inv_default_note': '', 'inv_default_reminder_months': '6', 'inv_default_r"
+ },
+ {
+  "name": "10d: expired access token is refreshed transparently",
+  "ok": true,
+  "detail": "ok"
+ },
+ {
+  "name": "10e: fully expired session asks to sign in again and saves nothing",
+  "ok": true,
+  "detail": "('auth', '☁️ حساب فاکتورساز\\n✕\\nاطلاعات شما به حساب\\u200cتان وصل می\\u200cشود و در هر دستگاه در دسترس است. سهمیهٔ رایگان و اشتراک هم به همین حس')"
+ },
+ {
+  "name": "11a: admin can log in to the admin page",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "11b: payment recorded + approved from the admin page → pack of 5 active",
+  "ok": true,
+  "detail": "{'blocked': False, 'free_left': 0, 'free_limit': 5, 'free_used': 5, 'pack_left': 5, 'paid': True, 'sub_active': False, 'sub_ends_at': None}"
+ },
+ {
+  "name": "11c: approving the same payment twice is refused",
+  "ok": true,
+  "detail": "(400, {'code': 'P0001', 'error_code': 'P0001', 'message': 'payment_not_pending', 'msg': 'payment_not_pending'})"
+ },
+ {
+  "name": "11d: the same receipt cannot be recorded twice",
+  "ok": true,
+  "detail": "(409, {'code': '23505', 'error_code': '23505', 'message': 'duplicate key value violates unique constraint \"payments_receipt_uq\"', 'msg': 'duplicate key value violates unique constraint \"payments_receipt_uq\"'})"
+ },
+ {
+  "name": "11e: after purchase the user can create invoices again (pack decremented)",
+  "ok": true,
+  "detail": "('ok', {'blocked': False, 'free_left': 0, 'free_limit': 5, 'free_used': 5, 'pack_left': 4, 'paid': True, 'sub_active': False, 'sub_ends_at': None})"
+ },
+ {
+  "name": "11f: cancelling the pack removes access immediately",
+  "ok": true,
+  "detail": "{'blocked': False, 'free_left': 0, 'free_limit': 5, 'free_used': 5, 'pack_left': 0, 'paid': False, 'sub_active': False, 'sub_ends_at': None}"
+ },
+ {
+  "name": "11g: after cancellation the user is back to the free rules (blocked)",
+  "ok": true,
+  "detail": "paywall"
+ },
+ {
+  "name": "11h: admin actions are audited",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "12a: migration dialog is offered when old local invoices exist",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "12b: old local data is kept safely before anything is moved",
+  "ok": true,
+  "detail": "3"
+ },
+ {
+  "name": "12c: 3 invoices migrated, no quota used",
+  "ok": true,
+  "detail": "{'blocked': False, 'free_used': 0, 'import_count': 3, 'migrated_at': 'Sun, 18 Oct 2026 03:06:45 GMT', 'settings': {'inv_categories_base': '[\"نصب\",\"سرویس دوره\\u200cای\",\"تعمیر فوری\",\"سرویس عادی\",\"بازدید و مشاوره\"]', 'inv_categories_removed': '[]', 'inv_companyName': 'شرکت قدیمی من', 'inv_default_note'"
+ },
+ {
+  "name": "12d: running migration again creates no duplicates",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "12e: legacy copy still on device after migration (never auto-deleted)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "12f: migrated invoices appear in the app",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "13a: restoring a backup in cloud mode goes through the migration path",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "13b: backup invoices imported without duplicates",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "13c: company settings are stored in the account",
+  "ok": true,
+  "detail": "['inv_categories_base', 'inv_categories_removed', 'inv_companyName', 'inv_default_note', 'inv_default_reminder_months']"
+ },
+ {
+  "name": "14a: sign-out wipes the cached invoices, settings and session",
+  "ok": true,
+  "detail": "{'rec': '[]', 'name': None, 'sess': None, 'owner': None}"
+ },
+ {
+  "name": "14b: legacy device copy is still there after sign-out",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "14c: a different account on the same browser sees none of the previous account data",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "15a: service worker registered, cache is versioned",
+  "ok": true,
+  "detail": "['factor-v14-cloud']"
+ },
+ {
+  "name": "15b: API/auth responses are never cached by the service worker",
+  "ok": true,
+  "detail": "[]"
+ },
+ {
+  "name": "15c: no secret keys / private keys / JWTs in the public site files",
+  "ok": true,
+  "detail": "[]"
+ },
+ {
+  "name": "15d: license-generator.html (private) is not inside the public site folder",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "16: no uncaught JavaScript errors on the main page",
+  "ok": true,
+  "detail": "[]"
+ }
+]

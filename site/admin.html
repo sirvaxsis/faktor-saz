@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>پنل مدیریت فاکتورساز</title>
+<script src="cloud-config.js"></script>
+<script src="cloud.js"></script>
+<style>
+  *{ box-sizing:border-box; }
+  body{ font-family:Tahoma,'Segoe UI',sans-serif; background:#f3f3f2; color:#111; margin:0; padding:14px; line-height:1.8; }
+  .wrap{ max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  .card{ background:#fff; border:1px solid #ddd; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  h1{ font-size:18px; margin:0; } h2{ font-size:14.5px; margin:0; }
+  input, select, textarea{ font-family:inherit; font-size:14px; padding:9px 10px; border:1px solid #ccc; border-radius:8px; width:100%; }
+  button{ font-family:inherit; font-size:13.5px; padding:8px 13px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; cursor:pointer; }
+  button.ghost{ background:#fff; color:#111; } button.danger{ background:#fff; color:#b3261e; border-color:#b3261e; } button.sm{ padding:4px 9px; font-size:12px; }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; } th,td{ border-bottom:1px solid #eee; padding:6px 4px; text-align:right; vertical-align:top; }
+  .row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; align-items:end; }
+  .ok{ color:#1a7f37; } .err{ color:#b3261e; } .small{ font-size:12px; color:#666; } code{ background:#f1f1f1; padding:1px 5px; border-radius:5px; direction:ltr; unicode-bidi:embed; font-size:12px; }
+  .pill{ display:inline-block; padding:1px 9px; border-radius:100px; font-size:11.5px; background:#eee; }
+  .pill.g{ background:#e6f4ea; color:#1a7f37; } .pill.r{ background:#fdecea; color:#b3261e; } .pill.y{ background:#fff4e5; color:#7a4a00; }
+  .ltr{ direction:ltr; text-align:left; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠 پنل مدیریت فاکتورساز</h1>
+  <div class="small">این صفحه فقط برای مدیر است. هر دکمه یک تابع امن در دیتابیس را صدا می‌زند که خودش «مدیر بودن» را بررسی می‌کند؛ پس صرفاً باز کردن این صفحه هیچ دسترسی نمی‌دهد. همهٔ عملیات در سابقهٔ مدیریتی ثبت می‌شود.</div>
+
+  <div class="card" id="loginCard">
+    <h2>ورود مدیر</h2>
+    <div class="row"><input id="email" type="email" class="ltr" placeholder="email"><input id="pass" type="password" class="ltr" placeholder="password"><button id="loginBtn">ورود</button></div>
+    <div id="loginMsg" class="small"></div>
+  </div>
+
+  <div id="app" style="display:none; flex-direction:column; gap:12px;">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><h2>جست‌وجوی کاربر</h2><span class="small" id="who"></span><button class="ghost sm" id="logoutBtn">خروج</button></div>
+      <div class="row"><input id="q" class="ltr" placeholder="ایمیل (حداقل ۳ حرف) یا شناسهٔ حساب (UUID)"><button id="findBtn">جست‌وجو</button></div>
+      <div id="results"></div>
+    </div>
+    <div id="detail"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var C = window.CloudClient;
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s === null || s === undefined ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var fmt = function(iso){ if(!iso) return '—'; try{ return new Intl.DateTimeFormat('fa-IR', { dateStyle:'medium', timeStyle:'short' }).format(new Date(iso)); }catch(e){ return iso; } };
+  var current = null, plans = [];
+
+  if(!C || !C.enabled){ $('loginCard').innerHTML = '<h2>حساب آنلاین هنوز تنظیم نشده است</h2><div class="small">فایل cloud-config.js را با آدرس و کلید عمومی Supabase پر کنید.</div>'; return; }
+
+  function errMsg(e){
+    var m = (e && (e.message || e.code)) || 'unknown';
+    var map = { forbidden:'شما مدیر نیستید.', payment_not_pending:'این پرداخت قبلاً تأیید یا رد شده است.', reason_required:'نوشتن دلیل اجباری است.', user_not_found:'کاربر پیدا نشد.',
+      query_too_short:'حداقل ۳ حرف بنویسید.', unknown_or_inactive_plan:'پلن نامعتبر است.', bad_value:'مقدار نامعتبر است.', entitlement_not_active:'این مورد فعال نیست.' };
+    for(var k in map){ if(String(m).indexOf(k) >= 0) return map[k]; }
+    if(String(m).indexOf('duplicate key') >= 0 || String(m).indexOf('payments_receipt_uq') >= 0) return 'این شمارهٔ رسید قبلاً ثبت شده است.';
+    return C.errText(e && e.code) + ' [' + m + ']';
+  }
+  function show(msgEl, text, cls){ msgEl.textContent = text || ''; msgEl.className = 'small ' + (cls || ''); }
+
+  function boot(){
+    var s = C.session();
+    if(!s){ $('loginCard').style.display = ''; $('app').style.display = 'none'; return; }
+    C.rpc('is_admin').then(function(ok){
+      if(ok !== true){ show($('loginMsg'), 'این حساب مدیر نیست. (مدیر باید با SQL در جدول admins ثبت شود.)', 'err'); return; }
+      $('loginCard').style.display = 'none'; $('app').style.display = 'flex'; $('who').textContent = (s.user && s.user.email) || '';
+      C.select('plans', 'select=id,title,kind,price_text&order=sort').then(function(p){ plans = p || []; }).catch(function(){});
+    }).catch(function(e){ show($('loginMsg'), errMsg(e), 'err'); });
+  }
+  $('loginBtn').onclick = function(){
+    show($('loginMsg'), 'صبر کنید...');
+    C.auth.signIn($('email').value.trim(), $('pass').value).then(boot).catch(function(e){ show($('loginMsg'), errMsg(e), 'err'); });
+  };
+  $('logoutBtn').onclick = function(){ C.auth.signOut().then(function(){ location.reload(); }); };
+
+  $('findBtn').onclick = function(){
+    var q = $('q').value.trim(); $('results').textContent = 'در حال جست‌وجو...';
+    C.rpc('admin_find_user', { p_query: q }).then(function(rows){
+      if(!rows || !rows.length){ $('results').textContent = 'کاربری پیدا نشد.'; return; }
+      $('results').innerHTML = '<table><tr><th>ایمیل</th><th>ثبت‌نام</th><th>ایمیل تأیید؟</th><th>وضعیت</th><th></th></tr>' + rows.map(function(r){
+        return '<tr><td class="ltr">' + esc(r.email) + '</td><td>' + fmt(r.created_at) + '</td><td>' + (r.email_confirmed ? '✔' : '✘') + '</td><td>' + (r.blocked ? '<span class="pill r">مسدود</span>' : '') + ' رایگان مصرف‌شده: ' + (r.free_used || 0) + '</td><td><button class="sm" data-open="' + esc(r.id) + '">باز کردن</button></td></tr>'; }).join('') + '</table>';
+    }).catch(function(e){ $('results').innerHTML = '<span class="err">' + esc(errMsg(e)) + '</span>'; });
+  };
+  $('results').addEventListener('click', function(e){ var b = e.target.closest('[data-open]'); if(b) open(b.getAttribute('data-open')); });
+
+  function open(id){
+    current = id; $('detail').innerHTML = '<div class="card">در حال بارگذاری...</div>';
+    C.rpc('admin_user_overview', { p_user: id }).then(render).catch(function(e){ $('detail').innerHTML = '<div class="card err">' + esc(errMsg(e)) + '</div>'; });
+  }
+  function reason(label){ var r = window.prompt(label || 'دلیل (اجباری):'); return r && r.trim() ? r.trim() : null; }
+  function act(fn, okText){
+    fn().then(function(){ if(okText) window.alert(okText); open(current); }).catch(function(e){ window.alert(errMsg(e)); });
+  }
+
+  function render(o){
+    var u = o.user, p = o.profile, st = o.state, ic = o.invoice_counts;
+    var planOpts = plans.map(function(x){ return '<option value="' + esc(x.id) + '">' + esc(x.title) + ' — ' + esc(x.price_text || '') + '</option>'; }).join('');
+    var ents = (o.entitlements || []).map(function(e){
+      var info = e.kind === 'sub' ? fmt(e.starts_at) + ' ← ' + fmt(e.ends_at) : (e.invoices_remaining + ' از ' + e.invoices_total);
+      return '<tr><td>' + esc(e.plan_id || e.kind) + '</td><td>' + (e.status === 'active' ? '<span class="pill g">فعال</span>' : '<span class="pill r">لغو</span>') + '</td><td>' + info + '</td><td>' +
+        (e.status === 'active' ? '<button class="danger sm" data-cancel="' + e.id + '">لغو</button> ' + (e.kind === 'pack' ? '<button class="ghost sm" data-setpack="' + e.id + '">اصلاح تعداد</button>' : '<button class="ghost sm" data-setend="' + e.id + '">اصلاح پایان</button>') : esc(e.cancel_reason || '')) + '</td></tr>'; }).join('');
+    var pays = (o.payments || []).map(function(x){
+      return '<tr><td>' + fmt(x.created_at) + '</td><td>' + esc(x.plan_id) + '</td><td>' + esc(x.amount_text || '') + ' ' + esc(x.channel) + '</td><td class="ltr">' + esc(x.receipt_ref || '') + '</td><td>' +
+        (x.status === 'pending' ? '<span class="pill y">در انتظار</span> <button class="sm" data-approve="' + x.id + '">تأیید و فعال‌سازی</button> <button class="danger sm" data-reject="' + x.id + '">رد</button>' : (x.status === 'approved' ? '<span class="pill g">تأیید‌شده</span>' : '<span class="pill r">ردشده</span>')) + '</td></tr>'; }).join('');
+    var qe = (o.quota_events || []).map(function(x){ return '<tr><td>' + fmt(x.created_at) + '</td><td>' + esc(x.op) + '</td><td class="ltr">' + esc(x.invoice_id) + '</td></tr>'; }).join('');
+    var se = (o.security_events || []).map(function(x){ return '<tr><td>' + fmt(x.created_at) + '</td><td>' + esc(x.kind) + '</td><td class="ltr">' + esc(JSON.stringify(x.details || {})) + '</td></tr>'; }).join('');
+    var au = (o.audit || []).map(function(x){ return '<tr><td>' + fmt(x.created_at) + '</td><td>' + esc(x.action) + '</td><td class="ltr">' + esc(JSON.stringify(x.details || {})) + '</td><td>' + esc(x.reason || '') + '</td></tr>'; }).join('');
+    $('detail').innerHTML =
+      '<div class="card"><h2>' + esc(u.email) + ' ' + (p.blocked ? '<span class="pill r">مسدود</span>' : '') + '</h2>' +
+      '<div class="small">شناسه: <code>' + esc(u.id) + '</code> · ثبت‌نام: ' + fmt(u.created_at) + ' · آخرین ورود: ' + fmt(u.last_sign_in_at) + ' · ایمیل ' + (u.email_confirmed_at ? 'تأیید شده' : '<b class="err">تأیید نشده</b>') + '</div>' +
+      '<div>سهمیهٔ رایگان: <b>' + (st.free_used) + ' از ' + st.free_limit + '</b> · فاکتور بسته باقی‌مانده: <b>' + st.pack_left + '</b> · اشتراک: <b>' + (st.sub_active ? 'فعال تا ' + fmt(st.sub_ends_at) : 'غیرفعال') + '</b></div>' +
+      '<div class="small">فاکتورها: ' + ic.active + ' فعال، ' + ic.imported + ' واردشده، ' + ic.trash + ' در سطل زباله · انتقال: ' + (p.migrated_at ? fmt(p.migrated_at) : 'نشده') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="ghost sm" data-freeused>اصلاح سهمیهٔ مصرف‌شدهٔ رایگان</button> ' + (p.blocked ? '<button class="sm" data-unblock>رفع مسدودی</button>' : '<button class="danger sm" data-block>مسدودکردن</button>') + '</div>' +
+      (p.blocked ? '<div class="small err">دلیل مسدودی: ' + esc(p.blocked_reason || '') + '</div>' : '') + '</div>' +
+
+      '<div class="card"><h2>ثبت پرداخت جدید</h2><div class="small">بعد از واریز مشتری: پلن را انتخاب کنید، «شمارهٔ پیگیری/رسید» را بنویسید (برای جلوگیری از ثبت دوبارهٔ همان رسید) و ثبت کنید؛ سپس در جدول پرداخت‌ها «تأیید و فعال‌سازی» را بزنید.</div>' +
+      '<div class="row"><select id="payPlan">' + planOpts + '</select><input id="payAmount" placeholder="مبلغ (مثلاً ۱۵۰,۰۰۰ تومان)"><select id="payChannel"><option value="telegram">تلگرام</option><option value="eitaa">ایتا</option><option value="card">کارت‌به‌کارت</option><option value="other">سایر</option></select><input id="payRef" class="ltr" placeholder="شمارهٔ پیگیری / رسید"><input id="payNote" placeholder="یادداشت"><button id="payBtn">ثبت پرداخت</button></div>' +
+      '<div class="row"><button class="ghost" id="grantBtn">فعال‌سازی بدون پرداخت (هدیه / انتقال مشتری قدیمی) با دلیل</button></div></div>' +
+
+      '<div class="card"><h2>پرداخت‌ها</h2><table><tr><th>زمان</th><th>پلن</th><th>مبلغ/روش</th><th>رسید</th><th>وضعیت</th></tr>' + (pays || '<tr><td colspan="5" class="small">—</td></tr>') + '</table></div>' +
+      '<div class="card"><h2>اشتراک‌ها و بسته‌ها</h2><table><tr><th>پلن</th><th>وضعیت</th><th>مدت / باقی‌مانده</th><th></th></tr>' + (ents || '<tr><td colspan="4" class="small">—</td></tr>') + '</table></div>' +
+      '<div class="card"><h2>مصرف سهمیه (۲۰ مورد آخر)</h2><table><tr><th>زمان</th><th>نوع</th><th>فاکتور</th></tr>' + (qe || '<tr><td colspan="3" class="small">—</td></tr>') + '</table></div>' +
+      '<div class="card"><h2>رویدادهای امنیتی</h2><table><tr><th>زمان</th><th>نوع</th><th>جزئیات</th></tr>' + (se || '<tr><td colspan="3" class="small">—</td></tr>') + '</table></div>' +
+      '<div class="card"><h2>سابقهٔ عملیات مدیریتی</h2><table><tr><th>زمان</th><th>عملیات</th><th>جزئیات</th><th>دلیل</th></tr>' + (au || '<tr><td colspan="4" class="small">—</td></tr>') + '</table></div>';
+  }
+
+  $('detail').addEventListener('click', function(e){
+    var t = e.target.closest('button'); if(!t) return;
+    var id;
+    if(t.id === 'payBtn'){
+      var plan = $('payPlan').value;
+      if(!window.confirm('پرداخت «' + plan + '» ثبت شود؟ (هنوز فعال نمی‌شود؛ بعد باید تأیید کنید.)')) return;
+      act(function(){ return C.rpc('admin_record_payment', { p_user: current, p_plan: plan, p_amount_text: $('payAmount').value, p_channel: $('payChannel').value, p_receipt_ref: $('payRef').value, p_note: $('payNote').value }); }, 'ثبت شد. حالا «تأیید و فعال‌سازی» را بزنید.');
+      return;
+    }
+    if(t.id === 'grantBtn'){
+      var plan2 = $('payPlan').value; var r = reason('دلیل فعال‌سازی بدون پرداخت (اجباری):'); if(!r) return;
+      if(!window.confirm('پلن «' + plan2 + '» بدون پرداخت فعال شود؟')) return;
+      act(function(){ return C.rpc('admin_grant_plan', { p_user: current, p_plan: plan2, p_reason: r }); }, 'فعال شد.'); return;
+    }
+    if((id = t.getAttribute('data-approve'))){ if(!window.confirm('پرداخت تأیید و اشتراک/بسته فعال شود؟ (فقط یک‌بار ممکن است)')) return; act(function(){ return C.rpc('admin_approve_payment', { p_payment: id }); }, 'فعال شد.'); return; }
+    if((id = t.getAttribute('data-reject'))){ var rr = reason('دلیل رد پرداخت:'); if(!rr) return; act(function(){ return C.rpc('admin_reject_payment', { p_payment: id, p_reason: rr }); }); return; }
+    if((id = t.getAttribute('data-cancel'))){ var rc = reason('دلیل لغو (اجباری):'); if(!rc) return; if(!window.confirm('این مورد لغو شود؟ دسترسی فوراً قطع می‌شود.')) return; act(function(){ return C.rpc('admin_cancel_entitlement', { p_ent: id, p_reason: rc }); }); return; }
+    if((id = t.getAttribute('data-setpack'))){ var v = window.prompt('تعداد فاکتور باقی‌مانده را بنویسید:'); if(v === null) return; var rp = reason(); if(!rp) return; act(function(){ return C.rpc('admin_set_pack_remaining', { p_ent: id, p_value: parseInt(v, 10), p_reason: rp }); }); return; }
+    if((id = t.getAttribute('data-setend'))){ var d = window.prompt('تاریخ پایان جدید (میلادی، مثل 2026-12-31T23:59:00Z):'); if(!d) return; var re = reason(); if(!re) return; act(function(){ return C.rpc('admin_set_sub_end', { p_ent: id, p_ends_at: d, p_reason: re }); }); return; }
+    if(t.hasAttribute('data-freeused')){ var f = window.prompt('تعداد فاکتور رایگانِ «مصرف‌شده» (۰ تا ۵):'); if(f === null) return; var rf = reason(); if(!rf) return; act(function(){ return C.rpc('admin_set_free_used', { p_user: current, p_value: parseInt(f, 10), p_reason: rf }); }); return; }
+    if(t.hasAttribute('data-block')){ var rb = reason('دلیل مسدودکردن (اجباری):'); if(!rb) return; act(function(){ return C.rpc('admin_set_blocked', { p_user: current, p_blocked: true, p_reason: rb }); }); return; }
+    if(t.hasAttribute('data-unblock')){ act(function(){ return C.rpc('admin_set_blocked', { p_user: current, p_blocked: false, p_reason: 'unblock' }); }); return; }
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
