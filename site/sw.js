@@ -7,7 +7,7 @@
 //    یک کاربر برای کاربر دیگر نمایش داده نمی‌شود.
 //  - هر صفحه با آدرس خودش کش می‌شود (قبلاً همهٔ ناوبری‌ها روی index.html نوشته می‌شد؛ با admin.html این اشتباه می‌شد).
 //  - لینک تأیید ایمیل / بازیابی رمز با #hash برمی‌گردد؛ hash در درخواست شبکه نمی‌آید و مشکلی ایجاد نمی‌کند.
-const VERSION = 'v15-cloud';
+const VERSION = 'v16-icons';
 const CACHE = 'factor-' + VERSION;
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './cloud.js', './cloud-config.js', './license-config.js'];
 
