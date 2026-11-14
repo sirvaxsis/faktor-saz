@@ -7,6 +7,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <script src="license-config.js"></script>
 <script src="cloud-config.js"></script>
+<script src="storage.js"></script>
+<script src="invoice-core.js"></script>
 <script src="cloud.js"></script>
 <meta name="theme-color" content="#111111">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2217,14 +2219,12 @@
   }
 
   // ---------- storage (graceful fallback if blocked, e.g. inside sandboxed preview) ----------
-  const memStore = {};
   const storage = {
-    get(key){
-      try{ return localStorage.getItem(key); }catch(e){ return memStore[key] ?? null; }
-    },
+    get: key => InvoiceStorage.get(key),
     set(key, val){
-      try{ localStorage.setItem(key, val); }catch(e){ memStore[key] = val; }
+      const persisted = InvoiceStorage.set(key, val);
       if(window.Cloud) Cloud.onSettingChanged(key);
+      return persisted;
     }
   };
 
@@ -2375,7 +2375,7 @@
   // ---------- element refs ----------
   const el = (id) => document.getElementById(id);
   const companyFields = ['companyName','companyPhone','companyAddress','companyEconomicId','companyNationalId','companyPostalCode','companyCardNumber','companySheba','companyBankName','companyAccountHolder'];
-  let logoDataUrl = storage.get('inv_logo') || '';
+  let logoDataUrl = InvoiceCore.safeLogo(storage.get('inv_logo'));
 
   // ---------- load persisted company settings ----------
   companyFields.forEach(id => {
@@ -2402,7 +2402,8 @@
     const box = el('logoPreviewBox');
     const removeBtn = el('removeLogoBtn');
     if(logoDataUrl){
-      box.innerHTML = '<img src="' + logoDataUrl + '" alt="لوگو">';
+      const image = document.createElement('img');
+      image.src = logoDataUrl; image.alt = 'لوگو'; box.replaceChildren(image);
       removeBtn.style.display = 'inline-block';
     } else {
       box.innerHTML = '<span>بدون لوگو</span>';
@@ -2421,7 +2422,8 @@
     }
     const reader = new FileReader();
     reader.onload = () => {
-      logoDataUrl = reader.result;
+      logoDataUrl = InvoiceCore.safeLogo(reader.result);
+      if(!logoDataUrl){ alert(LANG === 'en' ? 'Choose a PNG, JPEG, GIF or WebP image.' : 'یک تصویر PNG، JPEG، GIF یا WebP انتخاب کنید.'); e.target.value = ''; return; }
       storage.set('inv_logo', logoDataUrl);
       updateLogoPreviewBox();
       renderPreview();
@@ -3011,7 +3013,7 @@
           <input type="text" class="it-desc" placeholder="شرح کالا / خدمات (یا از فهرست انتخاب کنید)" value="${escapeHtml(desc||'')}" autocomplete="off">
           <div class="item-suggest-panel"></div>
         </div>
-        <input type="text" class="it-qty" inputmode="decimal" placeholder="تعداد (اعشاری هم مجاز است)" value="${qty||1}">
+        <input type="text" class="it-qty" inputmode="decimal" placeholder="تعداد (اعشاری هم مجاز است)" value="${escapeHtml(qty === undefined || qty === null ? 1 : qty)}">
         <input type="text" class="it-unit" list="commonUnitsList" placeholder="واحد" value="${escapeHtml(unit || '')}" title="واحد این ردیف (اختیاری، مثلاً دستگاه، متر، عدد، کیلوگرم)">
         <input type="text" class="it-price" inputmode="numeric" placeholder="قیمت واحد (ریال)" value="${price ? groupThousands(price) : ''}">
         <button type="button" class="remove-btn" title="حذف ردیف">✕</button>
@@ -3023,7 +3025,7 @@
           <input type="checkbox" class="it-tax-toggle" ${taxOn ? 'checked' : ''}>
           🧾 مالیات جداگانه برای این ردیف
         </label>
-        <input type="text" class="it-tax-percent" inputmode="numeric" placeholder="٪ مالیات این ردیف" value="${customTaxPercent !== undefined && customTaxPercent !== null ? customTaxPercent : ''}" style="display:${taxOn ? 'block' : 'none'};">
+        <input type="text" class="it-tax-percent" inputmode="numeric" placeholder="٪ مالیات این ردیف" value="${escapeHtml(customTaxPercent !== undefined && customTaxPercent !== null ? customTaxPercent : '')}" style="display:${taxOn ? 'block' : 'none'};">
       </div>
     `;
     el('itemsWrap').appendChild(wrap);
@@ -3122,18 +3124,10 @@
   // ---------- totals ----------
   function computeTotals(){
     const items = readItems();
-    const subtotal = items.reduce((s,it)=> s + it.qty*it.unitPrice, 0);
-    const discount = Math.max(0, Number(normalizeDigits(el('discount').value)) || 0);
-    const afterDiscount = Math.max(0, subtotal - discount);
     const taxPercent = Math.max(0, Number(el('taxPercent').value) || 0);
-    const hasMixedTax = items.some(it => it.useCustomTax);
-    const taxAmount = items.reduce((s, it) => {
-      const rate = it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : taxPercent;
-      return s + Math.round(it.qty * it.unitPrice * rate / 100);
-    }, 0);
-    const grandTotal = afterDiscount + taxAmount;
-    const deposit = Math.min(grandTotal, Math.max(0, Number(normalizeDigits(el('deposit').value)) || 0));
-    return { items, subtotal, discount, afterDiscount, taxPercent, taxAmount, grandTotal, hasMixedTax, deposit, balance: grandTotal - deposit };
+    const totals = InvoiceCore.totals(items, normalizeDigits(el('discount').value), taxPercent);
+    const deposit = Math.min(totals.grandTotal, Math.max(0, Number(normalizeDigits(el('deposit').value)) || 0));
+    return Object.assign(totals, { items, taxPercent, hasMixedTax: items.some(it => it.useCustomTax), deposit, balance: totals.grandTotal - deposit });
   }
 
   // ---------- render preview ----------
@@ -3151,10 +3145,10 @@
     const rows = t.items.map((it, idx) => {
       const lineTotal = it.qty * it.unitPrice;
       const rowRate = it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : t.taxPercent;
-      const lineVat = Math.round(lineTotal * rowRate / 100);
+      const lineVat = t.lineTaxes[idx];
       const vatLabel = it.useCustomTax ? `${formatMoney(lineVat)}<div class="item-detail-line">(٪${toFa(rowRate)} جداگانه)</div>` : formatMoney(lineVat);
       const unitLabel = it.unit ? escapeHtml(it.unit) : '—';
-      const rowGrandTotal = lineTotal + lineVat;
+      const rowGrandTotal = t.lineNet[idx] + lineVat;
       return `
       <tr>
         <td class="c-center">${toFa(idx+1)}</td>
@@ -3185,7 +3179,7 @@
         ${showNational ? '<span>شناسه ملی: ' + (nationalId ? toFa(escapeHtml(nationalId)) : '—') + '</span>' : ''}
         ${showPostal ? '<span>کد پستی: ' + (postalCode ? toFa(escapeHtml(postalCode)) : '—') + '</span>' : ''}
       </div>` : '';
-    const logoHtml = logoDataUrl ? `<img src="${logoDataUrl}" alt="لوگو">` : '';
+    const logoHtml = logoDataUrl ? `<img src="${escapeHtml(InvoiceCore.safeLogo(logoDataUrl))}" alt="لوگو">` : '';
 
     const custEconomicId = el('custEconomicId').value.trim();
     const custNationalId = el('custNationalId').value.trim();
@@ -3209,10 +3203,10 @@
           </div>
         </div>
         <div class="inv-meta">
-          <div class="num"><span class="num-l">${isPf ? LX('پیش\u200cفاکتور شماره', 'Proforma No.') : LX('فاکتور شماره', 'Invoice No.')}</span> <span class="num-n">${toFa(el('invNumber').value || '')}</span></div>
+          <div class="num"><span class="num-l">${isPf ? LX('پیش\u200cفاکتور شماره', 'Proforma No.') : LX('فاکتور شماره', 'Invoice No.')}</span> <span class="num-n">${escapeHtml(toFa(el('invNumber').value || ''))}</span></div>
           <div>تاریخ: ${escapeHtml(el('invDate').value || '')}</div>
           ${isPf && pfDays > 0 ? `<div>اعتبار: ${toFa(pfDays)} روز</div>` : ''}
-          <div>${isPf ? '<span class="inv-badge">📝 پیش\u200cفاکتور</span>' : (payStatus ? `<span class="inv-badge ${payStatus}">${payStatus === 'paid' ? '✅ پرداخت‌شده' : '⏳ پرداخت‌نشده'}</span>` : '')}</div>
+          <div>${isPf ? '<span class="inv-badge">📝 پیش\u200cفاکتور</span>' : (payStatus ? `<span class="inv-badge ${escapeHtml(payStatus)}">${payStatus === 'paid' ? '✅ پرداخت‌شده' : '⏳ پرداخت‌نشده'}</span>` : '')}</div>
         </div>
       </div>
 
@@ -3498,7 +3492,7 @@
     const matches = getCustomerSuggestions(query);
     if(matches.length === 0){ panel.classList.remove('open'); panel.innerHTML = ''; return; }
     panel.innerHTML = matches.map(r => `
-      <div class="customer-suggest-item" data-id="${r.id}">
+      <div class="customer-suggest-item" data-id="${escapeHtml(r.id)}">
         <div class="cs-name">${escapeHtml(r.custName || 'بدون نام')}</div>
         <div class="cs-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
       </div>`).join('');
@@ -3660,15 +3654,15 @@
     listEl.innerHTML = trash.map(r => {
       const daysLeft = Math.max(0, TRASH_DAYS - daysSince(r.deletedAt));
       return `
-        <div class="record-card" data-id="${r.id}">
+        <div class="record-card" data-id="${escapeHtml(r.id)}">
           <div class="record-main">
             <div class="record-title">${docLabel(r)} ${escapeHtml(r.invNumber || '—')} — ${escapeHtml(r.custName || 'بدون نام')}</div>
             <div class="record-sub">${escapeHtml(r.custPhone || '')} · تا ${toFa(daysLeft)} روز دیگر قابل بازگردانی</div>
           </div>
           <div class="record-right">
             <span class="record-amount">${formatMoney(r.total)} ریال</span>
-            <button type="button" class="btn outline sm" data-restore="${r.id}">↩️ بازگردانی</button>
-            <button type="button" class="record-delete" data-perm-del="${r.id}" title="حذف همیشگی">🗑</button>
+            <button type="button" class="btn outline sm" data-restore="${escapeHtml(r.id)}">↩️ بازگردانی</button>
+            <button type="button" class="record-delete" data-perm-del="${escapeHtml(r.id)}" title="حذف همیشگی">🗑</button>
           </div>
         </div>`;
     }).join('');
@@ -3676,6 +3670,7 @@
 
   function collectFormData(){
     return {
+      taxCalculationVersion: 2,
       invNumber: el('invNumber').value.trim(),
       invDate: el('invDate').value.trim(),
       paidStatus: el('paidStatus').value,
@@ -3762,11 +3757,11 @@
   }
 
   function quickStatusSelectHtml(r){
-    if((r.docType || 'invoice') === 'proforma') return `<span class="record-status pending">📝 پیش\u200cفاکتور</span><button type="button" class="btn outline sm" data-convert="${r.id}">🔄 تبدیل به فاکتور</button>`;
+    if((r.docType || 'invoice') === 'proforma') return `<span class="record-status pending">📝 پیش\u200cفاکتور</span><button type="button" class="btn outline sm" data-convert="${escapeHtml(r.id)}">🔄 تبدیل به فاکتور</button>`;
     const s = statusInfo(r.paidStatus);
     const cur = r.paidStatus || '';
     return `
-      <select class="quick-status-select ${s.cls}" data-id="${r.id}" title="تغییر سریع وضعیت پرداخت">
+      <select class="quick-status-select ${s.cls}" data-id="${escapeHtml(r.id)}" title="تغییر سریع وضعیت پرداخت">
         <option value="" ${cur === '' ? 'selected' : ''}>🕓 در انتظار</option>
         <option value="unpaid" ${cur === 'unpaid' ? 'selected' : ''}>⏳ پرداخت‌نشده</option>
         <option value="paid" ${cur === 'paid' ? 'selected' : ''}>✅ پرداخت‌شده</option>
@@ -3849,7 +3844,7 @@
       const s = statusInfo(r.paidStatus);
       const overdue = isOverdue(r, threshold);
       return `
-        <div class="record-card${overdue ? ' overdue' : ''}" data-id="${r.id}">
+        <div class="record-card${overdue ? ' overdue' : ''}" data-id="${escapeHtml(r.id)}">
           <div class="record-main">
             <div class="record-title">${docLabel(r)} ${escapeHtml(r.invNumber || '—')} — ${escapeHtml(r.custName || 'بدون نام')}</div>
             <div class="record-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
@@ -3859,7 +3854,7 @@
             <span class="record-amount">${formatMoney(r.total)} ریال</span>
             ${overdue ? `<span class="overdue-badge">⚠️ ${toFa(daysSince(r.savedAt))} روز معوق</span>` : ''}
             ${quickStatusSelectHtml(r)}
-            <button type="button" class="record-delete" data-del="${r.id}" title="حذف">🗑</button>
+            <button type="button" class="record-delete" data-del="${escapeHtml(r.id)}" title="حذف">🗑</button>
           </div>
         </div>`;
     }).join('');
@@ -3881,7 +3876,7 @@
     listEl.innerHTML = records.map(r => {
       const s = statusInfo(r.paidStatus);
       return `
-        <div class="record-card overdue" data-id="${r.id}">
+        <div class="record-card overdue" data-id="${escapeHtml(r.id)}">
           <div class="record-main">
             <div class="record-title">${docLabel(r)} ${escapeHtml(r.invNumber || '—')} — ${escapeHtml(r.custName || 'بدون نام')}</div>
             <div class="record-sub">${escapeHtml(r.custPhone || '')}${r.custAddress ? ' · ' + escapeHtml(r.custAddress) : ''}</div>
@@ -3929,15 +3924,15 @@
         badgeHtml = `<span class="reminder-badge later">${toFa(diffDays)} روز دیگر</span>`;
       }
       return `
-        <div class="${cardClass}" data-id="${r.id}">
+        <div class="${cardClass}" data-id="${escapeHtml(r.id)}">
           <div class="record-main">
             <div class="record-title">${escapeHtml(r.custName || 'بدون نام')} — ${docLabel(r)} ${escapeHtml(r.invNumber || '—')}</div>
             <div class="record-sub">${escapeHtml(r.custPhone || '')} · سررسید سرویس بعدی: ${escapeHtml(r.nextServiceDate || '—')}</div>
           </div>
           <div class="record-right">
             ${badgeHtml}
-            <button type="button" class="btn outline sm" data-extend="${r.id}">🔁 تمدید یک دوره</button>
-            <button type="button" class="record-delete" data-disable-reminder="${r.id}" title="غیرفعال کردن این یادآوری">🔕</button>
+            <button type="button" class="btn outline sm" data-extend="${escapeHtml(r.id)}">🔁 تمدید یک دوره</button>
+            <button type="button" class="record-delete" data-disable-reminder="${escapeHtml(r.id)}" title="غیرفعال کردن این یادآوری">🔕</button>
           </div>
         </div>`;
     }).join('');
@@ -4104,7 +4099,7 @@
         <div class="records-list" style="margin-top:14px;">
           ${records.map(r => {
             return `
-              <div class="record-card" data-id="${r.id}">
+              <div class="record-card" data-id="${escapeHtml(r.id)}">
                 <div class="record-main">
                   <div class="record-title">${docLabel(r)} ${escapeHtml(r.invNumber || '—')}</div>
                   <div class="record-sub">${fmtDate(r.savedAt)}</div>
@@ -4312,14 +4307,7 @@
 
   // ---------- backup / restore (export & import all data as a JSON file) ----------
   function getAllInvKeys(){
-    const keys = [];
-    try{
-      for(let i = 0; i < localStorage.length; i++){
-        const k = localStorage.key(i);
-        if(k && k.startsWith('inv_') && !/^inv_(lic|device_id|cloud|legacy)/.test(k)) keys.push(k);
-      }
-    }catch(e){ /* localStorage در دسترس نیست */ }
-    return keys;
+    return InvoiceStorage.keys().filter(k => k.startsWith('inv_') && !/^inv_(lic|device_id|cloud|legacy)/.test(k));
   }
 
   el('downloadBackupBtn').addEventListener('click', () => {
@@ -4354,9 +4342,17 @@
     reader.onload = () => {
       try{
         const parsed = JSON.parse(reader.result);
-        const data = (parsed && typeof parsed.data === 'object') ? parsed.data : parsed;
-        if(!data || typeof data !== 'object') throw new Error('ساختار فایل شناخته‌شده نیست');
+        const data = (parsed && parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
+        if(!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('ساختار فایل شناخته‌شده نیست');
         const keys = Object.keys(data).filter(k => k.startsWith('inv_') && !/^inv_(lic|device_id|cloud|legacy)/.test(k));
+        keys.forEach(k => {
+          if(typeof data[k] !== 'string') throw new Error('مقدار نامعتبر در فایل پشتیبان');
+          if(k === 'inv_logo') data[k] = InvoiceCore.safeLogo(data[k]);
+          if(k === 'inv_records' || k === 'inv_trash'){
+            const list = JSON.parse(data[k]);
+            if(!Array.isArray(list) || list.some(r => !r || typeof r !== 'object' || typeof r.id !== 'string' || !Array.isArray(r.items))) throw new Error('ساختار فاکتورها معتبر نیست');
+          }
+        });
         if(keys.length === 0) throw new Error('هیچ داده‌ی قابل‌بازیابی در این فایل پیدا نشد');
         if(!confirm(`این فایل شامل ${keys.length} مورد داده است. بازیابی، اطلاعات فعلی این مرورگر (فاکتورها و تنظیمات) را جایگزین می‌کند. ادامه می‌دهید؟`)){
           e.target.value = '';
@@ -4835,7 +4831,7 @@
   function applyCompanySnapshot(d){
     d = d || {};
     companyFields.forEach(id => { const v = (d.fields && d.fields[id]) || ''; el(id).value = v; storage.set('inv_' + id, v); });
-    logoDataUrl = d.logo || ''; storage.set('inv_logo', logoDataUrl); el('logoInput').value = ''; updateLogoPreviewBox();
+    logoDataUrl = InvoiceCore.safeLogo(d.logo); storage.set('inv_logo', logoDataUrl); el('logoInput').value = ''; updateLogoPreviewBox();
     el('alwaysShowIds').checked = !!d.showIds; storage.set('inv_alwaysShowIds', d.showIds ? '1' : '0');
     if(d.design && Object.keys(d.design).length && window.__invSetDesign) window.__invSetDesign(Object.assign({}, DEFAULT_DESIGN, d.design));
   }
@@ -4941,12 +4937,9 @@
   }
   function recordTotals(r){
     const items = Array.isArray(r.items) ? r.items : [];
-    const taxP = Math.max(0, Number(r.taxPercent) || 0);
-    const line = it => (Number(it.qty) || 0) * (Number(it.unitPrice) || 0);
-    const sub = items.reduce((a, it) => a + line(it), 0);
-    const disc = Math.max(0, Number(r.discount) || 0);
-    const tax = items.reduce((a, it) => a + Math.round(line(it) * (it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : taxP) / 100), 0);
-    return { sub, disc, tax };
+    // Preserve the tax amounts of historical invoices until explicitly edited.
+    const t = InvoiceCore.totals(items, r.discount, r.taxPercent, r.taxCalculationVersion !== 2);
+    return { sub: t.subtotal, disc: t.discount, tax: t.taxAmount, lineTaxes: t.lineTaxes };
   }
   function exportExcel(){
     const list = getFilteredRecords(el('recordSearch').value);
@@ -4963,7 +4956,7 @@
       (r.items || []).forEach((it, i) => {
         const lineTotal = (Number(it.qty) || 0) * (Number(it.unitPrice) || 0);
         const rate = it.useCustomTax ? Math.max(0, Number(it.customTaxPercent) || 0) : taxP;
-        rows2.push([numOrStr(r.invNumber), r.custName || '', i + 1, it.description || '', it.detail || '', Number(it.qty) || 0, it.unit || '', Number(it.unitPrice) || 0, lineTotal, Math.round(lineTotal * rate / 100), it.warranty || '']);
+        rows2.push([numOrStr(r.invNumber), r.custName || '', i + 1, it.description || '', it.detail || '', Number(it.qty) || 0, it.unit || '', Number(it.unitPrice) || 0, lineTotal, t.lineTaxes[i], it.warranty || '']);
       });
     });
     const bytes = buildXlsx([

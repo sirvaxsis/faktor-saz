@@ -7,9 +7,9 @@
 //    یک کاربر برای کاربر دیگر نمایش داده نمی‌شود.
 //  - هر صفحه با آدرس خودش کش می‌شود (قبلاً همهٔ ناوبری‌ها روی index.html نوشته می‌شد؛ با admin.html این اشتباه می‌شد).
 //  - لینک تأیید ایمیل / بازیابی رمز با #hash برمی‌گردد؛ hash در درخواست شبکه نمی‌آید و مشکلی ایجاد نمی‌کند.
-const VERSION = 'v16-icons';
+const VERSION = 'v17-storage-sync-security';
 const CACHE = 'factor-' + VERSION;
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './cloud.js', './cloud-config.js', './license-config.js'];
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './storage.js', './invoice-core.js', './cloud.js', './cloud-config.js', './license-config.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -34,7 +34,7 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; })
-        .catch(() => caches.match(req).then((r) => r || caches.match('./index.html') || caches.match('./')))
+        .catch(() => caches.match(req).then((r) => r || caches.match('./index.html').then((index) => index || caches.match('./'))))
     );
     return;
   }

@@ -10,11 +10,7 @@
   var ENABLED = !!(CFG.supabaseUrl && CFG.anonKey);
 
   // ---------- ابزارهای عمومی ----------
-  var LS = {
-    get: function(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
-    set: function(k, v){ try{ localStorage.setItem(k, v); }catch(e){} },
-    del: function(k){ try{ localStorage.removeItem(k); }catch(e){} }
-  };
+  var LS = window.InvoiceStorage;
   function readJSON(k, d){ try{ var v = JSON.parse(LS.get(k)); return v === null || v === undefined ? d : v; }catch(e){ return d; } }
   function isFa(){ return LS.get('inv_lang') !== 'en'; }
   function T(fa, en){ return isFa() ? fa : en; }
@@ -204,7 +200,7 @@
     'inv_job','inv_job_label','inv_app_title','inv_default_note','inv_default_reminder_months','inv_default_reminder_on','inv_show_vat_column','inv_show_unit_column','inv_show_row_total_column',
     'inv_profiles','inv_last_number','inv_last_pf','inv_overdue_days','inv_reminder_lead_days','inv_custom_pdf_name_on'];
   var NUMERIC_MAX_KEYS = { inv_last_number:1, inv_last_pf:1 };
-  var CACHE_KEYS = ['inv_records','inv_trash','inv_cloud_owner','inv_cloud_queue','inv_cloud_settings_rev','inv_cloud_settings_dirty','inv_cloud_first_link','inv_cloud_account'];
+  var CACHE_KEYS = ['inv_records','inv_trash','inv_cloud_owner','inv_cloud_queue','inv_cloud_settings_rev','inv_cloud_settings_dirty','inv_cloud_first_link','inv_cloud_account','inv_sync_conflicts'];
 
   function deviceId(){ var d = LS.get('inv_cloud_device'); if(!d){ d = uuid().replace(/-/g,'').slice(0,24); LS.set('inv_cloud_device', d); } return d; }
   function reloadSoon(){ setTimeout(function(){ location.reload(); }, 150); }
@@ -304,8 +300,12 @@
   function stripMeta(rec){ var c = Object.assign({}, rec); delete c._rev; delete c.deletedAt; return c; }
   function refreshUI(){ if(window.__cloudRefreshUI) try{ window.__cloudRefreshUI(); }catch(e){} }
 
+  var pullSequence = 0;
   function pull(){
     if(!session || !account || !account.email_confirmed) return Promise.resolve();
+    var sequence = ++pullSequence, owner = account.id;
+    var startRevisions = Object.create(null);
+    readJSON('inv_records', []).concat(readJSON('inv_trash', [])).forEach(function(r){ startRevisions[r.id] = r._rev; });
     var pend = pendingIds();
     return rpc('purge_old_trash').catch(function(){}).then(function(){
       var rows = [];
@@ -334,16 +334,25 @@
           })(need.slice(i, i + 40));
         }
         return chain.then(function(full){
+          if(!session || !account || account.id !== owner || sequence !== pullSequence) return;
+          pend = pendingIds();
+          local = {};
+          readJSON('inv_records', []).concat(readJSON('inv_trash', [])).forEach(function(r){ local[r.id] = r; });
           var newRecords = [], newTrash = [];
           var fullMap = {}; full.forEach(function(f){ fullMap[f.id] = f; });
           // رکوردهای محلی که هنوز با سرور یکی‌اند یا تغییر در انتظارِ ارسال دارند
           Object.keys(local).forEach(function(id){
             var l = local[id]; var s = serverIds[id];
-            if(!s){ if(pend[id]) (l.deletedAt ? newTrash : newRecords).push(l); return; }   // حذف‌شده در سرور → از کش بردار
-            if(pend[id] || fullMap[id]) return;
+            if(!s){
+              if(pend[id] || !Object.prototype.hasOwnProperty.call(startRevisions, id) || l._rev !== startRevisions[id])
+                (l.deletedAt ? newTrash : newRecords).push(l);
+              return;
+            }
+            if(fullMap[id] && !pend[id] && !(l._rev > fullMap[id].rev)) return;
             (l.deletedAt ? newTrash : newRecords).push(l);
           });
           full.forEach(function(f){
+            if(pend[f.id] || (local[f.id] && local[f.id]._rev > f.rev)) return;
             var rec = Object.assign({}, f.data, { id: f.id, _rev: f.rev });
             if(f.deleted_at){ rec.deletedAt = new Date(f.deleted_at).getTime(); newTrash.push(rec); } else { delete rec.deletedAt; newRecords.push(rec); }
           });
@@ -384,10 +393,33 @@
     toast(errText(code));
   }
 
+  var inFlight = null;
   function enqueue(op){
-    var q = readQueue().filter(function(x){ return !(x.id === op.id && x.op === op.op); });
-    if(op.op === 'save'){ q = q.filter(function(x){ return !(x.id === op.id && (x.op === 'delete' || x.op === 'purge')); }); }
+    op.token = uuid();
+    if(op.op === 'save') op.requestId = uuid();
+    var q = readQueue().filter(function(x){
+      if(inFlight && x.token === inFlight.token) return true;
+      return !(x.id === op.id && (x.op === op.op || (op.op === 'save' && (x.op === 'delete' || x.op === 'purge'))));
+    });
     q.push(op); writeQueue(q); flushQueue();
+  }
+  function finishOperation(op, res){
+    var q = readQueue().filter(function(x){ return x.token !== op.token; });
+    if(res && res.ok && op.op === 'save' && res.id === op.id){
+      q.forEach(function(x){ if(x.id === op.id && x.op === 'save' && x.rev === op.rev) x.rev = res.rev; });
+      ['inv_records','inv_trash'].forEach(function(key){
+        var records = readJSON(key, []);
+        records.forEach(function(r){ if(r.id === op.id) r._rev = res.rev; });
+        setRaw(key, JSON.stringify(records));
+      });
+    }
+    writeQueue(q);
+    inFlight = null;
+  }
+  function preserveConflict(op, error){
+    var conflicts = readJSON('inv_sync_conflicts', []);
+    conflicts.push({ operation: op, error: error, savedAt: Date.now() });
+    LS.set('inv_sync_conflicts', JSON.stringify(conflicts));
   }
   function onRecordsWrite(prev, next){
     if(!session) return;
@@ -400,28 +432,39 @@
   }
   function flushQueue(){
     if(flushing || !session || !account || !account.email_confirmed) return Promise.resolve();
-    var q = readQueue(); if(!q.length) return Promise.resolve();
+    if(!readQueue().length) return Promise.resolve();
     flushing = true;
+    var owner = session.user && session.user.id;
     function step(){
-      q = readQueue(); if(!q.length){ flushing = false; renderChip(); return pull(); }
+      if(!session || (session.user && session.user.id) !== owner){ flushing = false; inFlight = null; return; }
+      var q = readQueue();
+      if(!q.length){ flushing = false; inFlight = null; renderChip(); return pull(); }
       var op = q[0];
+      // Persist identity before sending, including operations queued by older versions.
+      if(!op.token) op.token = uuid();
+      if(op.op === 'save' && !op.requestId) op.requestId = uuid();
+      writeQueue(q); inFlight = op;
       var call;
-      if(op.op === 'save') call = rpc('save_invoice', { p_id: op.id, p_data: op.record, p_request_id: uuid(), p_base_rev: op.rev === undefined ? null : op.rev, p_device_id: deviceId() });
+      if(op.op === 'save') call = rpc('save_invoice', { p_id: op.id, p_data: op.record, p_request_id: op.requestId, p_base_rev: op.rev === undefined ? null : op.rev, p_device_id: deviceId() });
       else if(op.op === 'delete') call = rpc('delete_invoice', { p_id: op.id });
       else if(op.op === 'restore') call = rpc('restore_invoice', { p_id: op.id });
       else call = rpc('purge_invoice', { p_id: op.id });
       return call.then(function(res){
-        if(res && res.ok){
-          writeQueue(readQueue().slice(1)); return step();
-        }
+        if(!session || (session.user && session.user.id) !== owner){ flushing = false; inFlight = null; return; }
+        if(res && res.ok){ finishOperation(op, res); return step(); }
         var err = res && res.error;
-        if(err === 'rate_limited'){ flushing = false; setTimeout(flushQueue, 60000); return; }
-        writeQueue(readQueue().slice(1));                       // خطای غیرقابل‌تکرار: عملیات را رها کن و نسخهٔ سرور را بگیر
-        if(err && err !== 'not_found' && err !== 'not_in_trash') toast(errText(err));
-        return step();
+        if(err === 'rate_limited'){ flushing = false; inFlight = null; setTimeout(flushQueue, 60000); return; }
+        if(err === 'not_authenticated' || err === 'session_expired'){ flushing = false; inFlight = null; openAuth(errText(err)); return; }
+        if(err !== 'not_found' && err !== 'not_in_trash'){
+          preserveConflict(op, err || 'unknown');
+          toast(T('تغییر ارسال نشد؛ نسخهٔ آن در حساب من برای دانلود نگه داشته شد.', 'A change could not sync. Download its backup from My account.'));
+        }
+        finishOperation(op); return step();
       }).catch(function(e){
-        flushing = false; renderChip();
-        if(e && e.code !== 'offline'){ writeQueue(readQueue().slice(1)); toast(errText(e.code)); setTimeout(flushQueue, 500); }
+        flushing = false; inFlight = null; renderChip();
+        // Keep the same operation and request ID after any transport/server failure.
+        if(e && e.code !== 'offline') toast(errText(e.code));
+        if(e && e.status >= 500) setTimeout(flushQueue, 5000);
       });
     }
     return step();
@@ -551,6 +594,7 @@
   function renderChip(){
     if(!chip) return;
     var q = readQueue().length;
+    var conflicts = readJSON('inv_sync_conflicts', []).length;
     if(!session){ chip.innerHTML = '<span>☁️</span><span class="cb-pill cb-plan">' + esc(T('ورود / ثبت‌نام', 'Sign in / Sign up')) + '</span>'; chip.className = 'cloud-bar warn'; return; }
     var st = account && account.state;
     var low = st && !st.sub_active && (st.free_left + st.pack_left) <= 0;
@@ -652,10 +696,12 @@
     if(st.sub_ends_at) rows += '<div class="cl-row"><span>' + T('پایان اشتراک', 'Subscription ends') + '</span><span>' + fmtDate(st.sub_ends_at) + '</span></div>';
     var hist = ents.map(function(e){ return '<div class="cl-row"><span>' + esc(e.plan_id || e.kind) + (e.status === 'cancelled' ? ' (' + T('لغو‌شده', 'cancelled') + ')' : '') + '</span><span>' + (e.kind === 'sub' ? fmtDate(e.starts_at) + ' → ' + fmtDate(e.ends_at) : (e.invoices_remaining + ' / ' + e.invoices_total)) + '</span></div>'; }).join('');
     var q = readQueue().length;
+    var conflicts = readJSON('inv_sync_conflicts', []).length;
     openModal(head('☁️ ' + T('حساب من', 'My account')) +
       '<div>' + rows + '</div>' +
       (hist ? '<div class="cl-sec">' + T('تاریخچهٔ اشتراک و بسته‌ها', 'Plan history') + '</div><div>' + hist + '</div>' : '') +
       (q ? '<div class="cl-msg err">' + T(q + ' تغییر هنوز به سرور ارسال نشده است.', q + ' changes are not synced yet.') + '</div>' : '') +
+      (conflicts ? '<button type="button" class="btn outline sm" data-act="download-conflicts">' + T('دانلود تغییرات ارسال‌نشده (' + conflicts + ')', 'Download unsynced changes (' + conflicts + ')') + '</button>' : '') +
       '<button type="button" class="btn" data-act="plans">' + T('خرید / تمدید اشتراک', 'Buy / renew a plan') + '</button>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="btn outline sm" data-act="syncnow">' + T('همگام‌سازی اکنون', 'Sync now') + '</button>' +
       '<button type="button" class="btn outline sm" data-act="copyinfo" data-info="' + esc((account ? account.email + '\n' + account.id : '')) + '">' + T('کپی شناسهٔ حساب', 'Copy account ID') + '</button>' +
@@ -683,11 +729,18 @@
   }
   function authError(e){ return errText(e && e.code === 'invalid_credentials' ? 'invalid_credentials' : (e && (e.code || 'unknown'))); }
 
+  function downloadConflicts(){
+    var blob = new Blob([JSON.stringify({ app:'factorsaz-sync-recovery', changes:readJSON('inv_sync_conflicts', []) }, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'factorsaz-unsynced-changes.json'; a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
   function onCardClick(e){
     var b = e.target.closest('[data-act]'); if(!b) return;
     var act = b.getAttribute('data-act');
     var email = (document.getElementById('clEmail') || {}).value; email = email ? email.trim() : '';
     var pass = (document.getElementById('clPass') || {}).value || '';
+    if(act === 'download-conflicts'){ downloadConflicts(); return; }
     if(act === 'close'){ closeModal(); return; }
     if(act === 'tab-signin'){ authMode = 'signin'; authView(); return; }
     if(act === 'tab-signup'){ authMode = 'signup'; authView(); return; }
