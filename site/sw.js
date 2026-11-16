@@ -7,9 +7,9 @@
 //    یک کاربر برای کاربر دیگر نمایش داده نمی‌شود.
 //  - هر صفحه با آدرس خودش کش می‌شود (قبلاً همهٔ ناوبری‌ها روی index.html نوشته می‌شد؛ با admin.html این اشتباه می‌شد).
 //  - لینک تأیید ایمیل / بازیابی رمز با #hash برمی‌گردد؛ hash در درخواست شبکه نمی‌آید و مشکلی ایجاد نمی‌کند.
-const VERSION = 'v17-storage-sync-security';
+const VERSION = 'v18-premium-icons';
 const CACHE = 'factor-' + VERSION;
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './storage.js', './invoice-core.js', './cloud.js', './cloud-config.js', './license-config.js'];
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-v18-192.png', './icon-v18-512.png', './icon-v18-maskable-192.png', './icon-v18-maskable-512.png', './apple-touch-icon-v18.png', './favicon-v18-16.png', './favicon-v18-32.png', './favicon-v18.ico', './favicon.ico', './apple-touch-icon.png', './storage.js', './invoice-core.js', './cloud.js', './cloud-config.js', './license-config.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
